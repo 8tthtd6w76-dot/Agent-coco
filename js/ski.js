@@ -9,7 +9,7 @@ const SK_L=34,SK_R=606;
 function makeSki(def,np){
  const big=cheatOn('bigair'),chile=cheatOn('greenchile');
  const S={name:'ski',def,np,state:'intro',introIdx:0,outroIdx:0,t:0,paused:false,hearts:4,clues:[],coins:0,kills:0,floats:[],obs:[],skiers:[],balls:[],
-  camY:0,endT:0,crashes:0,tricks:0,gates:0,streak:0,chaser:null,len:def.length};
+  camY:0,endT:0,fx:[],crashes:0,tricks:0,gates:0,streak:0,chaser:null,len:def.length};
  const R=(typeof achRunStart==='function')?achRunStart(def,np):{};S.R=R;
  let seed=4242;const rng=()=>((seed=(seed*16807)%2147483647)/2147483647);
  S.players=[];for(let i=0;i<np;i++){const ch=i?p2Char():p1Char();S.players.push({i,ch,x:np>1?280+i*80:320,y:60,dir:0,v:80,air:0,airT:0,airH:0,trickT:0,trickPend:0,spin:0,stun:0,inv:0,
@@ -34,13 +34,14 @@ function makeSki(def,np){
   else{add({k:'clue',x:cx,y:y+130,ci:C0+i});add({k:'tree',x:cx-44,y:y+90,r:12});add({k:'tree',x:cx+44,y:y+90,r:12});add({k:'rock',x:cx,y:y+30,r:12});}});
  [.3,.6,.78].forEach(f=>{const y=Math.round(f*S.len)+300,x=200+rng()*240;clearArea(y-40,y+40,x-40,x+40);add({k:'pizza',x,y});});
  [.15,.4,.68,.9].forEach(f=>{const y=Math.round(f*S.len)+200,x=120+rng()*400;clearArea(y-40,y+40,x-40,x+40);add({k:'cash',x,y});});
+ [.12,.37,.63,.88].forEach((f,i)=>{const y=Math.round(f*S.len)+120,x=i%2?SK_R-50:SK_L+50;if(free(x,y,16))add({k:'snowman',x,y,r:12});});
  clearArea(-100,380,0,W);O.sort((a,b)=>a.y-b.y);R.coinTotal=coinTotal;
  // ---------- helpers ----------
  const float=(x,y,t,c='#fff')=>S.floats.push({x,y,t,c,life:1.3});
  const lead=()=>S.players.reduce((a,p)=>p.y>a.y?p:a,S.players[0]);
  const prog=()=>Math.min(1,lead().y/S.len);
  const ang=p=>p.dir*Math.PI/6;
- function crash(p,why,heart){if(p.inv>0||S.state!=='play')return;p.stun=heart?1:.55;p.v=0;p.inv=heart?1.7:.8;p.down=1;SFX.hurt();float(p.x,p.y-40,why,'#ff5a8a');S.streak=0;
+ function crash(p,why,heart){if(p.inv>0||S.state!=='play')return;p.stun=heart?1:.55;p.hc=heart;p.v=0;p.inv=heart?1.7:.8;p.down=1;SFX.hurt();float(p.x,p.y-40,why,'#ff5a8a');S.streak=0;
   if(heart){S.crashes++;R.hits=(R.hits||0)+1;S.hearts--;if(S.hearts<=0){S.hearts=0;finish(false,'Too many wipeouts!');}}}
  function finish(win,why){S.state='end';S.win=win;S.why=why;S.endT=0;stopMusic();playStinger(win?'win':'lose');}
  function payout(){R.coinsGot=S.coins;R.kos=S.kills;
@@ -67,6 +68,7 @@ function makeSki(def,np){
      else{p.turnT-=dt;if(p.turnT<=0){p.turnT=.14;if(side)p.shuffle=.2;else p.dir=Math.max(-3,Math.min(3,p.dir+st));}}}
     if(p.shuffle>0){p.shuffle-=dt;p.x+=Math.sign(p.dir)*80*dt;}
     const tuck=hold('down')&&p.air<=0;if(tuck&&p.dir!==0){p.tuckT=(p.tuckT||0)-dt;if(p.tuckT<=0){p.dir-=Math.sign(p.dir);p.tuckT=.08;}}
+    p.brake=hold('up')&&p.air<=0;p.tuck=tuck;
     let want=[330,290,185,0][Math.abs(p.dir)];if(tuck&&p.dir===0)want=430;if(hold('up')&&p.air<=0)want=Math.min(want,60);if(p.boost>0)want=540;
     if(p.air>0)want=p.v;p.v+=(want-p.v)*Math.min(1,dt*(want<p.v?2.6:1.25));
     if(tap('jump')&&p.air<=0){p.air=p.airT=.42;p.airH=18;SFX.jump();}
@@ -85,7 +87,7 @@ function makeSki(def,np){
   // obstacles and pickups
   for(const p of S.players){const z=p.air>0;
    for(const o of S.obs){if(o.y<p.y-80)continue;if(o.y>p.y+80)break;if(o.got)continue;const dx=p.x-o.x,dy=p.y-o.y;
-    if(o.k==='gate'){if(!o.passed&&p.y>=o.y&&p.y-Math.cos(ang(p))*p.v*dt<o.y+1){if(Math.abs(dx)<o.w/2){o.passed=1;S.gates++;S.streak++;const n=Math.min(5,S.streak);S.coins+=n;float(o.x,o.y-30,'GATE! +$'+n*2,'#7ff');SFX.pick();}
+    if(o.k==='gate'){if(!o.passed&&p.y>=o.y&&p.y-Math.cos(ang(p))*p.v*dt<o.y+1){if(Math.abs(dx)<o.w/2){o.passed=1;S.gates++;S.streak++;const n=Math.min(5,S.streak);S.coins+=n;float(o.x,o.y-30,'GATE! +$'+n*2,'#7ff');SFX.pick();S.fx.push({f:13,x:o.x,y:o.y-20,t:.45});}
        else if(Math.abs(dx)<o.w/2+70){o.passed=1;S.streak=0;float(o.x,o.y-30,'MISSED GATE','#9ab');}}continue;}
     if(o.k==='coin'||o.k==='cash'||o.k==='pizza'||o.k==='clue'){if(o.air&&!z)continue;if(Math.abs(dx)<22&&Math.abs(dy)<22){o.got=1;
       if(o.k==='coin'){S.coins++;SFX.pick();bump&&bump('coins');}
@@ -95,7 +97,7 @@ function makeSki(def,np){
     if(z)continue;const d=Math.hypot(dx,dy);
     if(o.k==='ramp'){if(Math.abs(dx)<o.r+6&&Math.abs(dy)<14&&p.v>80){p.air=p.airT=big?1.8:1.05;p.airH=big?110:60;p.trickPend=0;SFX.jump();float(p.x,p.y-40,'BIG AIR! (ATTACK = trick)','#7ff');}continue;}
     if(o.k==='mogul'){if(d<o.r){if(o.hitBy!==p.i){o.hitBy=p.i;p.v*=.62;p.air=p.airT=.25;p.airH=10;}}continue;}
-    if(d<o.r+7){if(o.k==='stump')crash(p,'TRIPPED!',false);else crash(p,o.k==='rock'?'ROCK!':'TREE!',true);p.x+=dx>=0?14:-14;}}}
+    if(d<o.r+7){if(o.k==='stump')crash(p,'TRIPPED!',false);else crash(p,o.k==='rock'?'ROCK!':o.k==='snowman'?'SNOWMAN!':'TREE!',true);p.x+=dx>=0?14:-14;}}}
   // stooges skiing badly across the slope
   if(S.state==='play'&&S.skiers.filter(s=>!s.out).length<(prog()>.5?3:2)&&Math.random()<dt*.5){const fromL=Math.random()<.5;
    S.skiers.push({x:fromL?SK_L+20:SK_R-20,y:S.camY+H+40+Math.random()*160,vx:(fromL?1:-1)*(50+Math.random()*50),vy:150+Math.random()*60,look:Math.floor(Math.random()*3),w:Math.random()*6});}
@@ -104,9 +106,9 @@ function makeSki(def,np){
   S.skiers=S.skiers.filter(s=>s.y>S.camY-120&&(!s.out||s.t<2));
   // snowballs
   for(const b of S.balls){b.life-=dt;b.x+=b.vx*dt;b.y+=b.vy*dt;
-   for(const s of S.skiers)if(!s.out&&Math.hypot(b.x-s.x,b.y-s.y)<22){b.life=0;s.out=1;S.kills++;S.coins+=2;float(s.x,s.y-30,'SPLAT! +$4','#ffd23a');SFX.hit();}
-   const c=S.chaser;if(c&&b.life>0&&Math.hypot(b.x-c.x,b.y-c.y)<34){b.life=0;c.stall=chile?2.4:1.7;float(c.x,c.y-40,'BRRR! STALLED!','#9ff');SFX.hit();}}
-  S.balls=S.balls.filter(b=>b.life>0);
+   for(const s of S.skiers)if(!s.out&&Math.hypot(b.x-s.x,b.y-s.y)<22){b.life=0;s.out=1;S.kills++;S.fx.push({f:12,x:s.x,y:s.y,t:.35});S.coins+=2;float(s.x,s.y-30,'SPLAT! +$4','#ffd23a');SFX.hit();}
+   const c=S.chaser;if(c&&b.life>0&&Math.hypot(b.x-c.x,b.y-c.y)<34){b.life=0;c.stall=chile?2.4:1.7;S.fx.push({f:12,x:c.x,y:c.y,t:.35});float(c.x,c.y-40,'BRRR! STALLED!','#9ff');SFX.hit();}}
+  S.balls=S.balls.filter(b=>b.life>0);for(const f of S.fx)f.t-=dt;S.fx=S.fx.filter(f=>f.t>0);
   // Lefty on the snowmobile
   if(!S.chaser&&prog()>=def.chaseAt){S.chaser={x:L.x,y:S.camY-90,v:L.v,stall:0};float(L.x,L.y-60,'LEFTY\'S ON A SNOWMOBILE! SNOWBALL HIM!','#c77dff');startMusic('aq2_chase');playStinger('unlock');}
   const c=S.chaser;if(c){const tgt=S.players.reduce((a,p)=>Math.abs(p.y-c.y)<Math.abs(a.y-c.y)?p:a,S.players[0]);
@@ -117,14 +119,31 @@ function makeSki(def,np){
   if(S.state==='play'&&L.y>=S.len)finish(true);};
  // ---------- drawing ----------
  const sy=y=>y-S.camY;
- function pine(x,y,s,snow){ctx.fillStyle='#5a3a1a';ctx.fillRect(x-3*s,y-4*s,6*s,8*s);
+ let pine=function(x,y,s,snow){ctx.fillStyle='#5a3a1a';ctx.fillRect(x-3*s,y-4*s,6*s,8*s);
   for(let k=0;k<3;k++){const w=(16-k*4)*s,yy=y-6*s-k*10*s;ctx.fillStyle=k%2?'#2e7a52':'#246a46';ctx.beginPath();ctx.moveTo(x,yy-14*s);ctx.lineTo(x-w,yy+2*s);ctx.lineTo(x+w,yy+2*s);ctx.closePath();ctx.fill();ctx.strokeStyle='#0e3a24';ctx.lineWidth=1.5;ctx.stroke();
-   if(snow){ctx.fillStyle='#fff';ctx.beginPath();ctx.moveTo(x,yy-14*s);ctx.lineTo(x-w*.4,yy-7*s);ctx.lineTo(x+w*.4,yy-7*s);ctx.fill();}}}
- function drawSlope(){ctx.fillStyle='#f3f7ff';ctx.fillRect(0,0,W,H);
+   if(snow){ctx.fillStyle='#fff';ctx.beginPath();ctx.moveTo(x,yy-14*s);ctx.lineTo(x-w*.4,yy-7*s);ctx.lineTo(x+w*.4,yy-7*s);ctx.fill();}}};
+ // v0.39: Michael's art (ski_props pines/rocks/ramps/gates/lodge, snow_tiles ground). Code drawing stays as the fallback.
+ const _pine=pine;pine=function(x,y,s,snow){const v=s>1.15?(hsh(x*.7+y)>.5?2:4):snow?3:hsh(x+y*.3)>.4?1:0;if(!abqDraw('ski_props',v,x,y+4,(v===0?.75:.62)*s))_pine(x,y,s,snow);};
+ function drawSlope(){const st=abqImg('snow_tiles');if(st){const T=160,off=((-S.camY)%T+T)%T;
+   for(let y=-T+off;y<H;y+=T){const row=Math.floor((S.camY+y+1)/T);for(let c=0;c<4;c++){const h=hsh(row*13.1+c*7.7);let tx=Math.floor(h*4),ty=0;
+     if(row>2&&h>.93){tx=0;ty=1;}/* only ski tracks: rock, cone and bump tiles would look like obstacles */ctx.drawImage(st,tx*160,ty*160,160,160,c*T,y,T+1,T+1);}}
+   const step=46,off2=((-S.camY)%step+step)%step;for(let y=-step+off2;y<H+step;y+=step){const row=Math.floor((S.camY+y)/step);
+    for(const [x0,x1] of [[0,SK_L],[SK_R,W]])for(let x=x0+8;x<x1+10;x+=26)pine(x+(((row*7+x)%9)+9)%9-4,y+20,.9,((row+x)%3+3)%3===0);}return;}
+  ctx.fillStyle='#f3f7ff';ctx.fillRect(0,0,W,H);
   ctx.fillStyle='rgba(150,180,230,.18)';for(let k=0;k<26;k++){const y=((k*97-S.camY)%560+560)%560-40,x=SK_L+(hsh(k)*560);ctx.beginPath();ctx.ellipse(x,y,40+hsh(k+3)*50,6,0,0,7);ctx.fill();}
   const step=46,off=((-S.camY)%step+step)%step;for(let y=-step+off;y<H+step;y+=step){const row=Math.floor((S.camY+y)/step);
    for(const [x0,x1] of [[0,SK_L],[SK_R,W]])for(let x=x0+8;x<x1+10;x+=26)pine(x+(((row*7+x)%9)+9)%9-4,y+20,.9,((row+x)%3+3)%3===0);}}
  function drawObs(o){const x=o.x,y=sy(o.y);if(y<-60||y>H+60||o.got)return;
+  if(abqImg('ski_props')){
+   if(o.k==='rock'){if(hsh(o.x)>.5)abqDraw('ski_props',6,x,y+10,.38);else abqDraw('ski_props',7,x,y+9,.6);return;}
+   if(o.k==='stump'){abqDraw('ski_props',8,x,y+8,.32);return;}
+   if(o.k==='mogul'){abqDraw('ski_props',9,x,y+12,.56);return;}
+   if(o.k==='snowman'){abqDraw('ski_props',15,x,y+8,.5);return;}
+   if(o.k==='ramp'){abqDraw('ski_props',11,x,y+16,.72);return;}
+   if(o.k==='gate'&&o.col!=='#ffd23a'){ctx.globalAlpha=o.passed?.45:1;abqDrawRect('ski_props',o.col==='#ff3a3a'?12:13,x-o.w/2-6,y-48,o.w+12,52);ctx.globalAlpha=1;
+    if(!o.passed){ctx.strokeStyle='rgba(255,180,0,.4)';ctx.lineWidth=2;ctx.setLineDash([6,6]);ctx.beginPath();ctx.moveTo(x-o.w/2,y);ctx.lineTo(x+o.w/2,y);ctx.stroke();ctx.setLineDash([]);}return;}
+   if(o.k==='cash'){const b=Math.sin(TIME*4+o.y)*3;abqDrawC('abq_pickups',12,x,y+b,.4);return;}}
+  if(o.k==='snowman'){ctx.fillStyle='#fff';ctx.strokeStyle='#557';ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y,11,0,7);ctx.fill();ctx.stroke();ctx.beginPath();ctx.arc(x,y-15,7,0,7);ctx.fill();ctx.stroke();return;}
   if(o.k==='tree'||o.k==='bigtree')pine(x,y+4,o.k==='bigtree'?1.3:1,hsh(o.x)>.4);
   else if(o.k==='rock'){ctx.fillStyle='#8a8a9a';ctx.strokeStyle='#33334a';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(x,y,15,10,0,0,7);ctx.fill();ctx.stroke();ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(x-2,y-6,8,3,0,0,7);ctx.fill();}
   else if(o.k==='stump'){ctx.fillStyle='#7a4a22';ctx.strokeStyle='#3a1a08';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(x,y,9,6,0,0,7);ctx.fill();ctx.stroke();ctx.fillStyle='#c8945a';ctx.beginPath();ctx.ellipse(x,y-2,6,3,0,0,7);ctx.fill();}
@@ -142,6 +161,19 @@ function makeSki(def,np){
   ctx.fillStyle='rgba(40,60,120,.25)';ctx.beginPath();ctx.ellipse(x,y+2,14,5,0,0,7);ctx.fill();
   const al=p.inv>0&&Math.floor(S.t*14)%2?.5:1;ctx.globalAlpha=al;
   const yy=y-z,sx=Math.sin(a),cy=Math.cos(a);
+  const art=p.ch==='agent_sisi'?'ski_sisi':p.ch==='agent_coco'?'ski_coco':null;
+  if(art&&abqImg(art)){let f;const sd=p.dir>0?1:p.dir<0?-1:0;
+   if(S.state==='intro')f=12;else if(S.state==='end'||S.state==='outro')f=S.win?13:15;
+   else if(p.down)f=p.hc?(p.stun>.6?10:11):14;
+   else if(p.air>0)f=p.trickT>0?[6,7,8][Math.floor(p.spin/2.2)%3]:p.air<.12?9:sd>0?1:sd<0?2:0;
+   else if(p.boost>0||p.tuck&&p.dir===0)f=5;
+   else if(p.brake)f=sd<0?3:4;
+   else f=Math.abs(p.dir)===3?(sd>0?4:3):sd>0?1:sd<0?2:0;
+   if(!p.down&&p.air<=0&&p.v>60&&(p.brake||Math.abs(p.dir)===3))abqDraw('ski_misc',14,x-sd*18,y+8,.3,sd<0);
+   abqDraw(art,f,x,yy+6,.52,false,al);ctx.globalAlpha=1;
+   if(p.boost>0){ctx.fillStyle='rgba(127,255,255,.6)';for(let k=0;k<4;k++)ctx.fillRect(x-14+k*9,yy-50-k*6-((S.t*300+k*40)%30),3,14);}
+   if(p.trickPend>0&&p.air>0)text('x'+p.trickPend,x+26,yy-60,12,'#ffd23a','left');
+   text(p.i?'P2':'P1',x,yy-74,10,CHARS[p.ch].tag,'center');return;}
   if(!p.down){ctx.strokeStyle=p.ch==='agent_sisi'?'#ff5ae0':p.ch==='agent_sandy'?'#9fe8ff':'#2de2f5';ctx.lineWidth=4;ctx.lineCap='round';
    for(const o of [-5,5]){const ox=cy*o,oy=-sx*o*.4;ctx.beginPath();ctx.moveTo(x+ox-sx*16,yy+oy-cy*8);ctx.lineTo(x+ox+sx*20,yy+oy+cy*10);ctx.stroke();}ctx.lineCap='butt';}
   const fr=p.down?(animFrames(p.ch,'crouch')[0]||'idle_1'):p.air>0?(animFrames(p.ch,p.trickT>0?'flip':'jump')[0]||'idle_1'):(animFrames(p.ch,p.v>300?'crouch':'idle')[0]||'idle_1');
@@ -150,12 +182,18 @@ function makeSki(def,np){
   if(p.boost>0){ctx.fillStyle='rgba(127,255,255,.6)';for(let k=0;k<4;k++)ctx.fillRect(x-14+k*9,yy-50-k*6-((S.t*300+k*40)%30),3,14);}
   if(p.trickPend>0&&p.air>0)text('x'+p.trickPend,x+22,yy-60,12,'#ffd23a','left');
   text(p.i?'P2':'P1',x,yy-72,10,CHARS[p.ch].tag,'center');}
- function drawStoogeSki(s){const x=s.x,y=sy(s.y);if(y<-60||y>H+60)return;ctx.save();ctx.translate(x,y);
+ function drawStoogeSki(s){const x=s.x,y=sy(s.y);if(y<-60||y>H+60)return;
+  if(abqImg('ski_misc')){const a=s.out?Math.max(0,1-(s.t||0)/2):1;abqDraw('ski_misc',4+Math.floor(s.w*6)%4,x,y+12,.46,s.vx<0,a,s.out?1.3:0);
+   if(s.out&&(s.t||0)<1)text('WHOOPS!',x,y-50,11,'#c77dff','center');return;}ctx.save();ctx.translate(x,y);
   if(s.out){ctx.rotate(1.3);ctx.globalAlpha=Math.max(0,1-(s.t||0)/2);}
   ctx.strokeStyle='#c77dff';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(-14,4);ctx.lineTo(16,8);ctx.moveTo(-14,-4);ctx.lineTo(16,0);ctx.stroke();
   ctx.scale((s.vx<0?-1:1)*.55,.55);drawStoogeBody(ctx,{wind:0,swing:0},STOOGE_LOOK[s.look],false,false,Math.sin(s.w*6)*3);ctx.restore();ctx.globalAlpha=1;
   if(s.out&&(s.t||0)<1)text('WHOOPS!',x,y-50,11,'#c77dff','center');}
- function drawChaser(c){const x=c.x,y=sy(c.y);if(y<-80||y>H+80)return;ctx.save();ctx.translate(x,y);
+ function drawChaser(c){const x=c.x,y=sy(c.y);if(y<-80||y>H+80)return;
+  if(abqImg('ski_misc')){ctx.fillStyle='rgba(0,0,0,.2)';ctx.beginPath();ctx.ellipse(x,y+30,26,8,0,0,7);ctx.fill();
+   abqDraw('ski_misc',c.stall>0?0:Math.floor(S.t*10)%4,x,y+34,.62);
+   if(c.stall>0){ctx.fillStyle='#bfe8ff';for(let k=0;k<3;k++){ctx.beginPath();ctx.arc(x-14+k*14,y-56+Math.sin(TIME*8+k)*3,6,0,7);ctx.fill();}}
+   text('LEFTY',x,y+52,11,'#c77dff','center');return;}ctx.save();ctx.translate(x,y);
   ctx.fillStyle='rgba(0,0,0,.2)';ctx.beginPath();ctx.ellipse(0,26,24,8,0,0,7);ctx.fill();
   ctx.fillStyle='#222';ctx.fillRect(-20,14,40,8);ctx.fillRect(-16,22,6,16);ctx.fillRect(10,22,6,16);
   rrect(-18,-22,36,42,12,c.stall>0?'#9ab':'#7a3ad8','#150a20',2.5);rrect(-12,10,24,12,5,'#9ad8ff','#150a20',2);ctx.fillStyle='#ffd23a';ctx.fillRect(-4,-4,8,8);
@@ -167,11 +205,14 @@ function makeSki(def,np){
   for(const p of S.players){ctx.strokeStyle='rgba(120,140,190,.45)';ctx.lineWidth=2;for(const o of [-5,5]){ctx.beginPath();let pen=false;for(const t of p.trail){if(t[2]){pen=false;continue;}if(!pen){ctx.moveTo(t[0]+o,sy(t[1]));pen=true;}else ctx.lineTo(t[0]+o,sy(t[1]));}ctx.stroke();}}
   const fy=sy(S.len);if(fy<H+140){for(let x=SK_L;x<SK_R;x+=40){ctx.fillStyle=(x/40)%2?'#fff':'#222';ctx.fillRect(x,fy,40,10);}
    ctx.fillStyle='#c04040';ctx.strokeStyle='#3a1a08';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(206,fy+84);ctx.lineTo(320,fy+34);ctx.lineTo(434,fy+84);ctx.closePath();ctx.fill();ctx.stroke();
-   rrect(220,fy+80,200,80,8,'#8a5a2a','#3a1a08',3);for(let k=0;k<3;k++)rrect(240+k*56,fy+100,36,28,4,'#ffe08a','#3a1a08',2);text(def.finishName,W/2,fy-10,16,'#ff3a3a','center');}
+   rrect(220,fy+80,200,80,8,'#8a5a2a','#3a1a08',3);for(let k=0;k<3;k++)rrect(240+k*56,fy+100,36,28,4,'#ffe08a','#3a1a08',2);
+   if(abqDraw('ski_props',14,W/2,fy+214,1.9)){abqDraw('ski_misc',15,W/2+170,fy+200,.5);abqDraw('ski_props',15,W/2-170,fy+200,.6);}
+   text(def.finishName,W/2,fy-10,16,'#ff3a3a','center');}
   const vis=S.obs.filter(o=>{const y=sy(o.y);return y>-60&&y<H+60;});
   const people=[...S.players.map(p=>({y:p.y,f:()=>drawSkier(p)})),...S.skiers.map(s=>({y:s.y,f:()=>drawStoogeSki(s)}))];if(S.chaser)people.push({y:S.chaser.y,f:()=>drawChaser(S.chaser)});
   people.sort((a,b)=>a.y-b.y);let k=0;for(const o of vis){while(k<people.length&&people[k].y<o.y-6){people[k].f();k++;}drawObs(o);}while(k<people.length){people[k].f();k++;}
-  for(const b of S.balls){ctx.fillStyle=chile?'#7adf3a':'#fff';ctx.strokeStyle='#557';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(b.x,sy(b.y),5,0,7);ctx.fill();ctx.stroke();}
+  for(const f of S.fx)abqDrawC('ski_misc',f.f,f.x,sy(f.y),.4+(f.f===13?.1:0),false,Math.min(1,f.t*4));
+  for(const b of S.balls){if(!chile&&abqDrawC('ski_misc',8+Math.floor(S.t*12)%4,b.x,sy(b.y),.17))continue;ctx.fillStyle=chile?'#7adf3a':'#fff';ctx.strokeStyle='#557';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(b.x,sy(b.y),5,0,7);ctx.fill();ctx.stroke();}
   for(const f of S.floats)text(f.t,Math.max(110,Math.min(W-110,f.x)),sy(f.y),f.t.length>10?12:15,f.c,'center');
   // HUD
   rrect(4,2,W-8,30,8,'rgba(6,20,36,.92)','#ff7ab0',2);for(let i=0;i<Math.max(4,S.hearts);i++)heart(16+i*22,13,i<S.hearts);

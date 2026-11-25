@@ -6,7 +6,7 @@
 //  aq3 Balloon Fiesta     (type:'balloon', vertical climb in hot air balloons, js/balloon.js)          boss: Baron Blowhard + Meatball
 // Opens after Dispatch Garage (dt2, where the kids learn about B.B.B.) or with the city code SANDIA.
 // Level codes TRAMWAY, POWDER, FIESTA. Cheats GREENCHILE, BIGAIR, PROPANE.
-// Art is code-drawn for now. Image prompts: agent-coco/prompts/albuquerque_art_prompts.md (Seq 69-80).
+// Art: Michael's sheets since v0.39 (js/abq_art.js, assets/abq/); the code drawing below is the fallback. Prompts: agent-coco/prompts/albuquerque_art_prompts.md.
 
 // ---------- city ----------
 KINDS.tram={label:'Tram rumble',icon:'available'};
@@ -152,7 +152,27 @@ function drawStoogeBody(c,e,look,flash,wind,walk){c.lineWidth=2.5;c.strokeStyle=
  else{c.fillStyle=wind?'#ff8a8a':'rgba(255,255,255,.35)';c.beginPath();c.ellipse(-4,-71,5,2.5,0,0,7);c.fill();}  // bald shine
  let ang=-0.5;if(e.wind>0)ang=-2.1;if(e.swing>0)ang=1.2;c.save();c.translate(12,-40);c.rotate(ang);c.fillStyle=look.skin;c.fillRect(0,-4,16,8);c.strokeRect(0,-4,16,8);
  c.fillStyle='#ffd23a';c.beginPath();c.arc(18,0,5,0,7);c.fill();c.stroke();c.restore();}   // gold-ringed fist
+// v0.39: Michael's stooge sheets (walk, punch, ouch, KO, parachute). Falls back to the code-drawn stooge if not loaded.
+function drawStoogeArt(e,L,bs,x){const set=ABQ_STOOGE[e.look||0];if(typeof abqImg!=='function'||!abqImg(set))return false;
+ const s=bs*(e.look===1?.82:.88),moved=Math.abs(e.x-(e._px!=null?e._px:e.x))>.05;e._px=e.x;let f,al=1,rot=0;
+ if(e.ob)f=16+Math.floor(TIME*6+(e.seed||0))%4;
+ else if(e.dead){f=e.dead<.12?12:e.dead<.26?13:Math.floor(TIME*4)%2?15:14;al=Math.max(0,1.4-e.dead);}
+ else if(e.hurt>0)f=Math.floor(TIME*10)%2?9:8;
+ else if(e.stagger>0)f=10;
+ else if(e.swing>0)f=6;
+ else if(e.wind>0)f=e.windT&&e.wind<e.windT*.5?5:4;
+ else if(e.air)f=12;
+ else if(moved)f=Math.floor(TIME*8+(e.seed||0))%4;
+ else f=11;
+ const q=e.sq>0&&!e.dead?e.sq/.15:0;
+ if(e.ob)rot=Math.sin(TIME*3+(e.seed||0))*.2;
+ abqDraw(set,f,x,e.y+(e.ob?0:2),s*(1+.1*q),e.face<0,al,rot);
+ if(e.ob)text('WAAAH!',x,e.y-150*bs,11,'#fff','center');
+ if(e.zip&&e.y<L.gy-4){ctx.strokeStyle='#222';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,e.y-90*bs);ctx.stroke();}
+ if(e.wind>0&&!e.dead&&Math.floor(TIME*12)%2===0)text('!',x,e.y-108*bs,20,'#ff3a3a','center');
+ return true;}
 function drawStooge(e,L,sc){const look=STOOGE_LOOK[e.look||0],bs=sc||1,x=e.x-L.cam;if(x<-140||x>W+140)return;
+ if(drawStoogeArt(e,L,bs,x))return;
  const q=e.sq>0&&!e.dead?e.sq/.15:0;ctx.save();ctx.translate(x,e.y);
  if(e.ob){// knocked overboard: floats away under a purple parachute
   const sw=Math.sin(TIME*3+e.seed)*.2;ctx.rotate(sw);ctx.strokeStyle='#150a20';ctx.lineWidth=1.5;ctx.fillStyle='#b05aff';
@@ -219,6 +239,34 @@ THEMES.sandia_tram={
   rrect(-300,-6,600,12,6,'#bfbfcf','#15151e',3);   // roof rim
   ctx.restore();},
  platform(L,p,x){rrect(x,p[1],p[2],L.gy-p[1],6,'#9a9aaa','#15151e',3);ctx.fillStyle='#ffd23a';for(let k=6;k<p[2]-6;k+=16)ctx.fillRect(x+k,p[1]+4,8,4);}};
+// v0.39: painted backdrop, cliff, passing cabin, tower and terminals from Michael's tram sheets (code art stays as the fallback)
+{const _bg=THEMES.sandia_tram.bg;
+ THEMES.sandia_tram.bg=function(L){const bd=abqImg('tram_backdrop');if(!bd)return _bg.call(this,L);
+  const T=L.tram||{p:0},p=T.p,GY=L.gy,sw=T.sway||0;
+  ctx.drawImage(bd,-40,-60+p*60,720,540);
+  // the second cabin passes us going down, mid-climb
+  if(p>.4&&p<.6){const k=(p-.4)/.2;abqDraw('tram_props',1,96,-140+k*760,1.5);}
+  // terminals and the mountain under the car: they slide down out of view as we climb
+  const piece=(n,at)=>{const A=ABQ_ART[n],by=H+(p-at)*3000;if(A&&by>0&&by-A.h<H)ctx.drawImage(abqImg(n),0,by-A.h,A.w,A.h);};
+  piece('tram_ground_lower',0);piece('tram_ground_bridge',.5);piece('tram_ground_overlook',.76);piece('tram_ground_upper',1);
+  // the Sandia cliff face sliding past on the right
+  const cl=abqImg('tram_cliff'),C=ABQ_ART.tram_cliff;if(cl&&C){const off=(p*1400)%C.h;for(let y=off-C.h;y<H;y+=C.h)ctx.drawImage(cl,W-200+p*30,y,C.w,C.h+1);}
+  // tower saddle
+  if(T.towerY!=null&&!abqDraw('tram_props',2,250,T.towerY+520,5)){}
+  // haul cable, hanger, bull wheel on the grip, car body (the roof is the arena at GY)
+  ctx.strokeStyle='#1a1a22';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-20,270);ctx.lineTo(W+20,30);ctx.stroke();
+  ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(-20,286);ctx.lineTo(W+20,46);ctx.stroke();
+  ctx.save();ctx.translate(W/2,GY);ctx.rotate(sw*.04);
+  ctx.fillStyle='#6a6a7a';ctx.strokeStyle='#15151e';ctx.lineWidth=3;ctx.fillRect(-8,-210,16,150);ctx.strokeRect(-8,-210,16,150);
+  abqDraw('tram_props',3,0,-188,.55,false,1,p*40);
+  rrect(-290,0,580,130,18,'#d8203a','#15151e',4);ctx.fillStyle='#f2f2f2';ctx.fillRect(-290,6,580,10);
+  for(let k=0;k<6;k++){const x=-262+k*90;rrect(x,28,72,52,8,'#9ad8ff','#15151e',3);ctx.fillStyle='rgba(30,30,60,.5)';ctx.beginPath();ctx.arc(x+24,72,10,Math.PI,0);ctx.arc(x+50,74,9,Math.PI,0);ctx.fill();}
+  rrect(-300,-6,600,12,6,'#bfbfcf','#15151e',3);
+  ctx.restore();};
+ const _pf=THEMES.sandia_tram.platform;
+ // the box on the roof is two strapped-down crates
+ THEMES.sandia_tram.platform=function(L,pl,x){if(!abqImg('tram_props'))return _pf.call(this,L,pl,x);const h=L.gy-pl[1];
+  const cw=pl[2]/2;abqDrawRect('tram_props',14,x,pl[1]-4,cw+2,h+4);abqDrawRect('tram_props',14,x+cw-2,pl[1]-4,cw+2,h+4);};}
 
 // ---------- the tram: level runner (makeLevel + waves, towers, overboard knock-offs, altitude) ----------
 function tramify(L,def){const D=def.tram,T={p:0,wi:0,active:false,halt:false,coinT:5,tw:0,warn:0,sway:0,towerY:null,ob:0,done:0};L.tram=T;L.cluesTotal=3;L.minCam=0;
