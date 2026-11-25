@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Agent Coco</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Agent Coco">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#05030f">
+<style>
+:root{--bg:#05030f;--ink:#cfe6ef;--dim:#7f8fb0;--cyan:#2de2f5;--gold:#ffd23a;color-scheme:dark}
+html,body{height:100%;margin:0;background:var(--bg);overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+body{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--ink);
+ font:600 12px/1.4 "Trebuchet MS",Verdana,sans-serif;padding:env(safe-area-inset-top,0px) max(16px,env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0px) max(16px,env(safe-area-inset-left,0px));box-sizing:border-box}
+canvas{display:block;background:#000;touch-action:none;outline:none;border-radius:4px;box-shadow:0 0 0 2px #1b0a3a}
+canvas:focus-visible{box-shadow:0 0 0 2px var(--cyan)}
+.hint{color:var(--dim);text-align:center;max-width:640px;margin:0}
+.hint b{color:var(--gold);font-weight:700}
+#turn{display:none;position:fixed;inset:0;background:var(--bg);z-index:5;flex-direction:column;align-items:center;justify-content:center;gap:12px;font-size:18px;text-align:center;padding:24px}
+#turn span{font-size:56px;display:inline-block;transform:rotate(90deg)}
+#padL,#padR{display:none}
+html.phonepad body{flex-direction:row;gap:0;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+html.phonepad canvas{border-radius:0;box-shadow:none}
+html.phonepad #padL,html.phonepad #padR{display:flex;flex:1;height:100%;flex-direction:column;align-items:center;justify-content:center;gap:calc(var(--u)*.5);touch-action:none;min-width:0}
+.phonepad button{font:800 calc(var(--u)*.42) "Trebuchet MS",Verdana,sans-serif;border-radius:50%;border:3px solid;background:rgba(10,20,40,.9);padding:0;touch-action:none;-webkit-tap-highlight-color:transparent;pointer-events:none}
+.phonepad button.on{background:#fff;color:#05030f!important}
+.dpad{position:relative;width:calc(var(--u)*3);height:calc(var(--u)*3)}
+.dpad button{position:absolute;width:var(--u);height:var(--u);border-radius:22%;color:#2de2f5;border-color:#2de2f5;pointer-events:auto}
+.dpad .du{left:var(--u);top:0}.dpad .dd{left:var(--u);bottom:0}.dpad .dl{left:0;top:var(--u)}.dpad .dr{right:0;top:var(--u)}
+.dpad .hub{position:absolute;left:var(--u);top:var(--u);width:var(--u);height:var(--u);background:rgba(45,226,245,.12);border-radius:20%}
+.dpad button.on{background:#ffd23a;border-color:#ffd23a}
+.abxy{position:relative;width:calc(var(--u)*3);height:calc(var(--u)*3)}
+.abxy button{position:absolute;width:calc(var(--u)*1.05);height:calc(var(--u)*1.05);pointer-events:auto}
+.abxy .by{left:calc(var(--u)*.975);top:0;color:#ffd23a;border-color:#ffd23a}
+.abxy .bx{left:0;top:calc(var(--u)*.975);color:#4aa8ff;border-color:#4aa8ff}
+.abxy .bb{right:0;top:calc(var(--u)*.975);color:#ff6a6a;border-color:#ff6a6a}
+.abxy .ba{left:calc(var(--u)*.975);bottom:0;color:#59d96b;border-color:#59d96b}
+.phonepad .row{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;max-width:100%}
+.phonepad .bs,.phonepad .bk{border-radius:999px;width:auto;height:calc(var(--u)*.7);padding:0 8px;font-size:calc(var(--u)*.28);color:#cfd8ff;border-color:#cfd8ff;pointer-events:auto}
+.phonepad .bk{color:#ffd23a;border-color:#ffd23a}
+#kbIn{position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;font-size:16px;border:0;padding:0}
+@media (pointer:coarse){.hint{display:none}}
+@media (pointer:coarse) and (orientation:portrait){#turn{display:flex}}
+</style></head><body>
+<div id="padL"></div>
+<canvas id="game" tabindex="0" aria-label="Agent Coco game. Tap or click, then press Enter to start."></canvas>
+<div id="padR"></div>
+<input id="kbIn" type="text" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" aria-label="Type a code">
+<p class="hint"><b>Tap or click the game, then press Enter.</b> v0.38: Albuquerque city, cover presets from real notes, pizza delivery art, and pick your agent (Coco, Sisi or Sandy) after 1 PLAYER or 2 PLAYER CO-OP. Enter code TESTING to open everything. P1: WASD, W jump, F attack, G gadget, Tab pause. P2: arrows, . attack, / gadget, Enter pause. N mutes.</p>
+<div id="turn"><span>&#128241;</span><b style="color:var(--gold)">Turn your phone sideways</b><div style="color:var(--dim);font-size:14px">Agent Coco plays in landscape.</div></div>
+<script src="js/data.js"></script>
+<script src="js/assets_extra.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/controls.js"></script>
+<script src="js/touch.js"></script>
+<script src="js/music.js"></script>
+<script src="js/musichook.js"></script>
+<script src="js/scenes.js"></script>
+<script src="js/entity.js"></script>
+<script src="js/player.js"></script>
+<script src="js/enemies.js"></script>
+<script src="js/items.js"></script>
+<script src="js/gadgets.js"></script>
+<script src="js/themes.js"></script>
+<script src="js/levels.js"></script>
+<script src="js/level.js"></script>
+<script src="js/kits.js"></script>
+<script src="js/hack.js"></script>
+<script src="js/codes.js"></script>
+<script src="js/lab.js"></script>
+<script src="js/studio_core.js"></script>
+<script src="js/groove_random.js"></script>
+<script src="js/studio.js"></script>
+<script src="js/presets_covers.js"></script>
+<script src="js/delivery.js"></script>
+<script src="js/delivery_art.js"></script>
+<script src="js/achievements.js"></script>
+<script src="js/stealth.js"></script>
+<script src="js/pursuit.js"></script>
+<script src="js/eggs.js"></script>
+<script src="js/city_roads.js"></script>
+<script src="js/campaign.js"></script>
+<script src="js/downtown.js"></script>
+<script src="js/rides_mission.js"></script>
+<script src="js/story.js"></script>
+<script src="js/wirecut.js"></script>
+<script src="js/lockpick.js"></script>
+<script src="js/codedrop.js"></script>
+<script src="js/city_missions.js"></script>
+<script src="js/art_nov25.js"></script>
+<script src="js/charselect.js"></script>
+<script src="js/abq_road.js"></script>
+<script src="js/ski.js"></script>
+<script src="js/balloon.js"></script>
+<script src="js/abq.js"></script>
+<script src="js/main.js"></script>
+<script src="js/phone_pad.js"></script>
+<script>
+function fitPage(){const pp=document.documentElement.classList.contains('phonepad'),coarse=matchMedia('(pointer:coarse)').matches;
+ const cs=getComputedStyle(document.body),aw=document.body.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight),ah=document.body.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom);
+ let s;if(pp){s=Math.min(ah/H,(aw-2*Math.min(170,Math.max(120,aw*.2)))/W);const bar=(aw-W*s)/2;document.documentElement.style.setProperty('--u',Math.max(34,Math.min(bar/3.3,ah/5.2,64))+'px');}
+ else s=Math.min((innerWidth-(coarse?8:32))/W,(innerHeight-(coarse?8:60))/H);
+ canvas.style.width=W*s+'px';canvas.style.height=H*s+'px';}
+addEventListener('resize',fitPage);setTimeout(fitPage,0);addEventListener('orientationchange',()=>setTimeout(fitPage,250));fitPage();
+canvas.addEventListener('pointerdown',()=>canvas.focus());canvas.focus();
+if('serviceWorker' in navigator&&/github\.io$/.test(location.hostname))navigator.serviceWorker.register('sw.js').catch(()=>{});
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist();}catch(e){}
+</script>
+</body></html>

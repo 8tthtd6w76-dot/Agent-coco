@@ -1,0 +1,72 @@
+{
+ "sisi_guitar_loop": {
+  "frames": 4,
+  "cellW": 170,
+  "h": 220
+ },
+ "guitar_states": {
+  "frames": 3,
+  "cellW": 77,
+  "h": 220
+ },
+ "coco_laptop_loop": {
+  "frames": 4,
+  "cellW": 187,
+  "h": 220
+ },
+ "speakers_states": {
+  "frames": 3,
+  "cellW": 153,
+  "h": 220
+ },
+ "guitar_loop": {
+  "frames": 4,
+  "cellW": 76,
+  "h": 220
+ },
+ "speakers_loop": {
+  "frames": 4,
+  "cellW": 156,
+  "h": 220
+ },
+ "fm1_loop": {
+  "frames": 4,
+  "cellW": 369,
+  "h": 220
+ },
+ "duet_loop": {
+  "frames": 4,
+  "cellW": 235,
+  "h": 220
+ },
+ "sandy_dj_loop": {
+  "frames": 4,
+  "cellW": 211,
+  "h": 220
+ },
+ "beatpad_states": {
+  "frames": 3,
+  "cellW": 316,
+  "h": 220
+ },
+ "fm1_states": {
+  "frames": 3,
+  "cellW": 348,
+  "h": 220
+ },
+ "beatpad_loop": {
+  "frames": 4,
+  "cellW": 292,
+  "h": 220
+ },
+ "laptop_loop": {
+  "frames": 4,
+  "cellW": 266,
+  "h": 220
+ },
+ "door_states": {
+  "frames": 3,
+  "cellW": 149,
+  "h": 220
+ }
+}
