@@ -12,7 +12,12 @@ function loadAssets(cb){let n=0;const tot=ASSET_LIST.length+Object.keys(SHEETS).
  Object.keys(SHEETS).forEach(ch=>{const i=new Image();i.onload=done;i.onerror=done;i.src='assets/'+ch+'/sheet.png';IMG['sheet_'+ch]=i;});}
 // ===== Input: Player 1 (Coco) owns the LEFT of the keyboard, Player 2 (Sisi) the RIGHT. Solo accepts both. See design/controls_layout_spec.md =====
 const KEYS={};
-addEventListener('keydown',e=>{KEYS[e.code]=true;if(e.code.startsWith('Arrow')||e.code==='Space'||e.code==='Tab')e.preventDefault();});
+// v0.46: KTAP remembers every key that went down since the last frame, so a very quick tap (down and up between two frames,
+// easy on a slow frame on the Retroid) still counts as a press. LAST_DEV = what the player last used ('key','pad','touch'), for prompts.
+const KTAP={};
+let LAST_DEV=/Android/i.test(navigator.userAgent)?'pad':(matchMedia&&matchMedia('(pointer:coarse)').matches?'touch':'key');
+addEventListener('keydown',e=>{KEYS[e.code]=true;if(!e.repeat){KTAP[e.code]=true;if(e.code!=='KeyN')LAST_DEV='key';}if(e.code.startsWith('Arrow')||e.code==='Space'||e.code==='Tab')e.preventDefault();});
+addEventListener('pointerdown',e=>{if(e.pointerType==='touch'||e.pointerType==='pen')LAST_DEV='touch';},true);
 addEventListener('keyup',e=>{KEYS[e.code]=false;});
 const BTN=['jump','attack','gadget','start','up','down','left','right','back','ok'];
 function mkInput(){const o={};BTN.forEach(b=>o[b]=false);return o;}
@@ -23,23 +28,36 @@ const KMAP=[
  // Player 2, right hand: arrows, Up jumps, "." attacks, "/" gadget, Right Shift swaps gadget, Enter pauses. Numpad 1/2 still work on a full keyboard.
  {ok:['Space','Enter','NumpadEnter'],jump:['ArrowUp'],attack:['Period','Numpad1'],gadget:['Slash','Numpad2'],start:['Enter','Escape'],up:['ArrowUp'],down:['ArrowDown'],left:['ArrowLeft'],right:['ArrowRight'],back:['ShiftRight']}];
 let padOf=[-1,-1];
+// v0.46 stick feel: a direction turns on past 0.5 and only turns off again under 0.3 (no flicker when a thumb rests near the edge).
+// STICK_MENU (set by input_feel.js on menu screens) keeps only the stronger axis, so a slightly diagonal push never moves the cursor twice.
+// AXES[p] = the analog stick (-1..1, small dead zone removed) for modes that want smooth steering (Gadget Lab soldering).
+const AXES=[{x:0,y:0},{x:0,y:0}],STK=[{},{}],PADWAS=[0,0];let STICK_MENU=false;
+function dz(v){const a=Math.abs(v);return a<.18?0:Math.sign(v)*Math.min(1,(a-.18)/.72);}
+function stickDir(p,ax,ay){const S=STK[p];let x=ax,y=ay;
+ if(STICK_MENU){if(Math.abs(x)>Math.abs(y)*1.15)y=0;else if(Math.abs(y)>Math.abs(x)*1.15)x=0;else{x=S.l||S.r?x:0;y=x?0:y;}}
+ S.l=x<(S.l?-.3:-.5);S.r=x>(S.r?.3:.5);S.u=y<(S.u?-.3:-.55);S.d=y>(S.d?.3:.55);return S;}
 function pollInput(){
  for(let p=0;p<2;p++)for(const b of BTN)PREV[p][b]=INPUT[p][b];
  const pads=(navigator.getGamepads?navigator.getGamepads():[])||[];const live=[];
  for(const g of pads)if(g&&g.connected)live.push(g);
  for(let p=0;p<2;p++){
-  const I=INPUT[p];for(const b of BTN){I[b]=KMAP[p][b].some(k=>KEYS[k]);}
-  const g=live[p];
+  const I=INPUT[p];for(const b of BTN){I[b]=KMAP[p][b].some(k=>KEYS[k]||KTAP[k]);}
+  const g=live[p];AXES[p].x=0;AXES[p].y=0;
   if(g){const bt=i=>g.buttons[i]&&g.buttons[i].pressed;const ax=g.axes;
-   I.ok=I.ok||bt(0);I.jump=I.jump||bt(0);I.attack=I.attack||bt(2)||bt(1);I.gadget=I.gadget||bt(3)||bt(5)||bt(7);
-   I.start=I.start||bt(9);I.back=I.back||bt(8)||bt(1)&&false;
-   I.left=I.left||bt(14)||ax[0]<-0.5;I.right=I.right||bt(15)||ax[0]>0.5;
-   I.up=I.up||bt(12)||ax[1]<-0.6;I.down=I.down||bt(13)||ax[1]>0.6;
-   I.jump=I.jump||bt(4);I.back=I.back||bt(1);}
+   const sx=dz(ax[0]||0),sy=dz(ax[1]||0);AXES[p].x=sx;AXES[p].y=sy;const S=stickDir(p,ax[0]||0,ax[1]||0);
+   I.ok=I.ok||bt(0);I.jump=I.jump||bt(0);I.attack=I.attack||bt(2)||(!STICK_MENU&&bt(1));  /* on menus B is only Back, never also X */I.gadget=I.gadget||bt(3)||bt(5)||bt(7);
+   I.start=I.start||bt(9);I.back=I.back||bt(8);
+   I.left=I.left||bt(14)||S.l;I.right=I.right||bt(15)||S.r;
+   I.up=I.up||bt(12)||S.u;I.down=I.down||bt(13)||S.d;
+   I.jump=I.jump||bt(4);I.back=I.back||bt(1);
+   if(bt(12))AXES[p].y=-1;if(bt(13))AXES[p].y=1;if(bt(14))AXES[p].x=-1;if(bt(15))AXES[p].x=1;
+   let n=0;for(let i=0;i<g.buttons.length&&i<17;i++)if(bt(i))n++;if(S.l||S.r||S.u||S.d)n++;if(n>PADWAS[p])LAST_DEV='pad';PADWAS[p]=n;}
+  else PADWAS[p]=0;
  }
  if(typeof touchApply==='function')touchApply(INPUT[0]);  // on-screen buttons (touch.js) drive Player 1
  // solo: one player may use either keyboard half (and Space also jumps), so the game never needs a second player
- if(typeof NPLAYERS!=='undefined'&&NPLAYERS===1){const A=INPUT[0],B=INPUT[1];for(const b of BTN)A[b]=A[b]||B[b];if(KEYS['Space'])A.jump=true;}
+ if(typeof NPLAYERS!=='undefined'&&NPLAYERS===1){const A=INPUT[0],B=INPUT[1];for(const b of BTN)A[b]=A[b]||B[b];if(KEYS['Space']||KTAP['Space'])A.jump=true;}
+ for(const k in KTAP)delete KTAP[k];
 }
 const pressed=(p,b)=>INPUT[p][b]&&!PREV[p][b];
 const anyPressed=b=>pressed(0,b)||pressed(1,b);

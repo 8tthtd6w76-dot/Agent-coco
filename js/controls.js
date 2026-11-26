@@ -14,7 +14,15 @@ const CTL_SCENE={
  stealth:[['move','sneak'],['attack','takedown'],['gadget','gadget']],
  pursuit:[['move','steer'],['jump','hop']],
  delivery:[['move','ride'],['attack','toss pizza'],['gadget','boost']],
- hack:[['move','cursor'],['attack','turn'],['gadget','turn back']]};
+ hack:[['move','cursor'],['attack','turn'],['gadget','turn back']],
+ // v0.46
+ wirecut:[['move','pick wire'],['attack','cut'],['gadget','trace']],
+ lockpick:[['jump','top lane'],['attack','bottom lane']],
+ codedrop:[['move','move'],['jump','rotate'],['attack','rotate back'],['gadget','slam']]};
+// v0.46: a player who last used a gamepad sees pad buttons in their pill instead of keys
+const PAD_HINT={move:'STICK',jump:'A',attack:'X',gadget:'Y'};
+function padLive(p){try{return [...(navigator.getGamepads?navigator.getGamepads():[])].filter(g=>g&&g.connected).length>p;}catch(e){return false;}}
+function hintFor(P,p){return LAST_DEV==='pad'&&padLive(p)?Object.assign({},P,{hint:PAD_HINT}):P;}
 
 function keycap(x,y,label,col,h){h=h||24;ctx.font='bold '+(label.length>1?11:13)+'px "Trebuchet MS",Verdana,sans-serif';
  const w=Math.max(h,Math.ceil(ctx.measureText(label).width)+14);
@@ -62,6 +70,6 @@ function drawKeyHints(dt){
  if(s.state!=='intro')_hintT-=dt;
  ctx.save();ctx.globalAlpha=Math.min(1,_hintT/1.5);
  const y=s.name==='stealth'?H-62:H-34;
- if(NPLAYERS>1){hintPill(8,y,CTL_P[0],items,2);hintPill('r',y,CTL_P[1],items,2);}
- else{const P=Object.assign({},CTL_P[0],{short:'1 PLAYER',hint:{move:'WASD / ARROWS',jump:'W / ↑',attack:'F / .',gadget:'G / /'}});hintPill('c',y,P,items,1);}
+ if(NPLAYERS>1){hintPill(8,y,hintFor(CTL_P[0],0),items,2);hintPill('r',y,hintFor(CTL_P[1],1),items,2);}
+ else{const P=Object.assign({},CTL_P[0],{short:'1 PLAYER',hint:{move:'WASD / ARROWS',jump:'W / ↑',attack:'F / .',gadget:'G / /'}});hintPill('c',y,hintFor(P,0),items,1);}
  ctx.restore();}

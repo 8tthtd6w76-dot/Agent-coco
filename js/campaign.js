@@ -167,7 +167,10 @@ Object.assign(MapScene,{mode:'valley',city:'gilbert',sel:1,vsel:1,lsel:0,ltab:0,
  nodes(){return this.mode==='city'?cityLayout(this.city):VALLEY_NODES();},
  dirNav(N,sel){const c=N[sel],dirs={left:[-1,0],right:[1,0],up:[0,-1],down:[0,1]};
   for(const d in dirs)if(anyPressed(d)){let best=-1,bs=1e9;N.forEach((n,i)=>{if(i===sel)return;const dx=n.x-c.x,dy=n.y-c.y,dot=dx*dirs[d][0]+dy*dirs[d][1];if(dot<=4)return;
-   const sc=Math.hypot(dx,dy)+Math.abs(dx*dirs[d][1]-dy*dirs[d][0])*1.6;if(sc<bs){bs=sc;best=i;}});if(best>=0){sel=best;SFX.move();}}
+   const sc=Math.hypot(dx,dy)+Math.abs(dx*dirs[d][1]-dy*dirs[d][0])*1.6;if(sc<bs){bs=sc;best=i;}});
+   // v0.46: nothing that way? step to the next pin in order (Right/Down) or the one before (Left/Up), so the cursor never gets stuck
+   if(best<0&&N.length>1)best=(sel+(d==='right'||d==='down'?1:N.length-1))%N.length;
+   if(best>=0){sel=best;SFX.move();}break;}
   return sel;},
  say(m,t=2.6){this.msg=m;this.msgT=t;},
  tryStart(l){if(!l)return;const st=levelStatus(l);

@@ -92,12 +92,11 @@ const Watch={name:'watch',tab:0,sel:0,hint:0,ctxMode:'map',
  make(mode){this.ctxMode=mode;this.tab=0;this.sel=0;this.page=0;pushMusic('watch');return this;},
  close(){popMusic();pop();if(this.ctxMode==='level'&&scene.paused!=null)scene.paused=false;},
  update(){
-  if(anyPressed('right')&&this.sel===-1||anyPressed('right')&&this.tab<7&&false){}
   if(anyPressed('left')){this.tab=(this.tab+7)%8;this.sel=0;SFX.move();}
   if(anyPressed('right')){this.tab=(this.tab+1)%8;this.sel=0;SFX.move();}
   const WL=watchLevels(),max=this.tab===0?(this.ctxMode==='level'?WL.length+2:WL.length):0;
-  if(this.tab===0){if(anyPressed('down')){this.sel=Math.min(max-1,this.sel+1);SFX.move();}if(anyPressed('up')){this.sel=Math.max(0,this.sel-1);SFX.move();}}
-  if(this.tab===7){if(anyPressed('down')){this.sel=Math.min(RIDES.length-1,this.sel+1);SFX.move();}if(anyPressed('up')){this.sel=Math.max(0,this.sel-1);SFX.move();}}
+  if(this.tab===0&&max){if(anyPressed('down')){this.sel=(this.sel+1)%max;SFX.move();}if(anyPressed('up')){this.sel=(this.sel+max-1)%max;SFX.move();}}
+  if(this.tab===7){const n=RIDES.length;if(anyPressed('down')){this.sel=(this.sel+1)%n;SFX.move();}if(anyPressed('up')){this.sel=(this.sel+n-1)%n;SFX.move();}}
   if(this.tab===4){const n=casePages().length;if(anyPressed('down')){this.page=(this.page+1)%n;SFX.move();}if(anyPressed('up')){this.page=(this.page+n-1)%n;SFX.move();}}
   if(anyPressed('back')||anyPressed('start')){SFX.move();this.close();return;}
   if(anyPressed('ok')){

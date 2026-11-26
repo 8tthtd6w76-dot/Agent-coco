@@ -25,6 +25,7 @@ const LairMenu={name:'lairmenu',sel:0,
   this.items().forEach((it,i)=>{const y=100+i*40,s=i===this.sel;rrect(40,y,248,34,10,s?'rgba(255,210,58,.95)':'rgba(30,60,90,.8)',s?'#fff':'#2de2f5',2);
    text(it.n,164,y+23,16,s?'#102':'#fff','center',null);if(i===0&&!SAVE.firstDelivery){ctx.fillStyle='#ff5a8a';ctx.beginPath();ctx.arc(282,y+8,6+Math.sin(TIME*6)*1.5,0,7);ctx.fill();}});
   const it=this.items()[this.sel];if(it.d){panel(24,420,592,48,'#456');wrap(it.d,40,450,560,16,14,'#cfe',null);}
+  text('Up/Down: choose   A: open   B: back',W-24,76,10,'#9fb','right',null);
   drawToast();}};
 
 // ---------- Barro's shop ----------
@@ -56,8 +57,9 @@ const Lab={name:'lab',sel:0,
  update(){const L=labList();navList(this,L.length);
   if(anyPressed('ok')){const it=L[this.sel],r=it.def,c=recipeCheck(r);
    if(it.kind==='ride'&&rideOwned('agent_bike')){toast('You already built the Agent Bike!','#9fb');return;}
-   if(!c.ok){toast(c.missing.some(m=>m.rare)?'Missing a rare part: find it in a mission':!c.cash?'Not enough cash for the fee':'Missing parts: buy them at Barro\'s','#ff5a8a');SFX.hurt();return;}
+   if(!c.ok){toast(c.missing.some(m=>m.rare)?'Missing a rare part: find it in a mission':!c.cash?'Not enough cash for the fee':'Missing parts: press Y for Barro\'s shop','#ff5a8a');SFX.hurt();return;}
    spendRecipe(r);save();SFX.ok();push(Craft.make(it));return;}
+  if(anyPressed('gadget')){SFX.ok();push(Shop.make());return;}  // v0.46: Y jumps to Barro's for missing parts
   if(backPressed()||anyPressed('start')){SFX.move();pop();}},
  draw(){bgPic('scenes/lair_lab',.5);text('GADGET LAB',W/2,40,28,'#2de2f5','center');cashTag();
   const L=labList();panel(14,60,250,410);const top=Math.max(0,Math.min(this.sel-5,L.length-11));
@@ -74,6 +76,7 @@ const Lab={name:'lab',sel:0,
   for(const id of (r.rare||[])){const f=rareFound(id),d=partDef(id);itemIcon(id,304,y-4,20,!f);text(f?d.n:'??? (rare part)',320,y+1,13,f?'#ffd23a':'#89a','left',null);
    text(f?'FOUND':'found in: ???',610,y+1,12,f?'#7f7':'#ff9ac0','right',null);y+=26;}
   text(c.ok?'A: CRAFT IT!':'Not ready yet',451,452,16,c.ok?'#7f7':'#89a','center',null);
+  text('Up/Down: choose   A: craft   Y: Barro\'s shop   B: back',W-14,H-2,10,'#9fb','right',null);
   drawToast();}};
 
 // ---------- Crafting minigames ----------
@@ -84,7 +87,7 @@ function drawShape(k,x,y,r,fill,stroke='#000'){ctx.fillStyle=fill;ctx.strokeStyl
  ctx.fill();ctx.stroke();}
 const Craft={name:'craft',
  make(it){this.it=it;this.r=it.def;this.kind=it.def.craft;this.t=0;this.state='how';this.q=0;this.tapeAsk=false;
-  if(this.kind==='solder'){this.tipY=240;this.good=0;this.tot=0;this.trail=[];this.seed=Math.random()*10;}
+  if(this.kind==='solder'){this.tipY=240;this.tipV=0;this.good=0;this.tot=0;this.trail=[];this.seed=Math.random()*10;}
   if(this.kind==='print'){this.layer=0;this.hits=0;this.pos=0;this.dir=1;this.zone=this.newZone();this.layers=[];}
   if(this.kind==='snap'){const ids=Object.keys(this.r.parts).concat(this.r.rare||[]).slice(0,4);while(ids.length<4)ids.push(PARTS[ids.length+3].id);
    const sh=SHAPES.slice().sort(()=>Math.random()-.5);this.slots=ids.map((id,i)=>({id,shape:sh[i],done:false}));this.tray=this.slots.map(s=>s).sort(()=>Math.random()-.5);this.cur=0;this.si=0;this.miss=0;this.time=15;}
@@ -96,14 +99,14 @@ const Craft={name:'craft',
   if(this.state==='how'){if(this.t>.3&&(anyPressed('ok')||anyPressed('attack'))){this.state='play';this.t=0;SFX.ok();}if(backPressed()){/* refund: crafting not started */if(!SAVE.testing){for(const id in this.r.parts)SAVE.parts[id]=(SAVE.parts[id]||0)+this.r.parts[id];SAVE.coins+=this.r.fee;save();}pop();}return;}
   if(this.state==='done'){if(this.tapeAsk){if(anyPressed('ok')){SAVE.parts.tape--;this.q=1;this.tapeAsk=false;this.apply();SFX.ok();}else if(backPressed()){this.tapeAsk=false;this.apply();}return;}
    if(this.t>.6&&(anyPressed('ok')||backPressed())){SFX.ok();pop();}return;}
-  if(this.kind==='solder'){const x=80+this.t/7*480;const u=anyHeld('up')?-1:anyHeld('down')?1:0;this.tipY=Math.max(90,Math.min(400,this.tipY+u*230*dt));
+  if(this.kind==='solder'){const x=80+this.t/7*480;const u=feelAxisAny('up','down','y');this.tipV=(this.tipV||0)+(u*240-(this.tipV||0))*Math.min(1,dt*16);this.tipY=Math.max(90,Math.min(400,this.tipY+this.tipV*dt));
    const ok=Math.abs(this.tipY-this.solderY(x))<16;this.tot++;if(ok)this.good++;if(this.tot%3===0)this.trail.push([x,this.tipY,ok]);
    if(ok&&this.tot%9===0)beep(1200+Math.random()*200,.03,'triangle',.02);
    if(this.t>=7){const k=this.good/this.tot;this.score=Math.round(k*100);this.finish(k>=.85?2:k>=.6?1:0);}}
   if(this.kind==='print'){const sp=.7+this.layer*.18;this.pos+=this.dir*sp*dt;if(this.pos>1){this.pos=1;this.dir=-1;}if(this.pos<0){this.pos=0;this.dir=1;}
    if(anyPressed('ok')||anyPressed('attack')||anyPressed('jump')){const hit=this.pos>=this.zone.a&&this.pos<=this.zone.a+this.zone.w;this.layers.push(hit);if(hit){this.hits++;SFX.ok();}else SFX.hurt();
     this.layer++;if(this.layer>=5){this.score=this.hits;this.finish(this.hits>=5?2:this.hits>=3?1:0);}else this.zone=this.newZone();}}
-  if(this.kind==='snap'){this.time-=dt;if(anyPressed('left')){this.cur=(this.cur+3)%4;SFX.move();}if(anyPressed('right')){this.cur=(this.cur+1)%4;SFX.move();}
+  if(this.kind==='snap'){this.time-=dt;if(anyPressed('up')){this.cur=(this.cur+3)%4;SFX.move();}if(anyPressed('down')){this.cur=(this.cur+1)%4;SFX.move();}if(anyPressed('left')){this.cur=(this.cur+3)%4;SFX.move();}if(anyPressed('right')){this.cur=(this.cur+1)%4;SFX.move();}
    if(anyPressed('ok')||anyPressed('attack')){const pick=this.tray[this.cur],slot=this.slots[this.si];
     if(pick.done){SFX.move();}else if(pick===slot){slot.done=true;this.si++;beep(900,.08,'square',.05);beep(1300,.1,'square',.04);if(this.si>=4){this.finish(this.miss===0&&this.time>5?2:this.miss<=1?1:0);}}
     else{this.miss++;SFX.hurt();}}
@@ -161,4 +164,5 @@ const Equip={name:'equip',sel:0,
    else if(g){itemIcon(g.id,222,y+30,36);text(g.n,250,y+26,16,s?'#102':'#fff','left',null);text(g.ch?(QUALITY[gadgetQ(g.id)]+' '+(g.consumable?'x'+(SAVE.testing?99:SAVE.smoke):g.id==='grapple'?'unlimited':g.ch[gadgetQ(g.id)]+' per mission')):'Always on',250,y+46,12,s?'#102':'#9fb','left',null);}
    else text(this.owned().length?'(empty) A: pick a gadget':'(empty) Craft a gadget in the Gadget Lab first',146,y+44,14,s?'#102':'#89a','left',null);});
   panel(40,400,560,64,'#456');wrap('In a mission: hold DOWN and press GADGET to use it. UP + GADGET (or Select) switches slots. Tap GADGET alone for the watch beam.',56,424,530,17,13,'#cfe',null);
+  text('Up/Down: slot   A or Left/Right: change gadget   B: back',W/2,H-4,10,'#9fb','center',null);
   drawToast();}};
