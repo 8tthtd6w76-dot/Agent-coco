@@ -54,4 +54,6 @@ function drawMouseHover(){const o=MUI.mouseRecent()?MUI.at(MUI.mx,MUI.my):null;c
  if(o.arrows){ctx.fillStyle='#ffd23a';const cy=o.y+o.h/2;for(const [x,s] of [[o.x+4,1],[o.x+o.w-4,-1]]){ctx.beginPath();ctx.moveTo(x,cy);ctx.lineTo(x+s*6,cy-5);ctx.lineTo(x+s*6,cy+5);ctx.closePath();ctx.fill();}}
  ctx.restore();}
 const _muiDrawTouch=drawTouch;
-drawTouch=function(){drawMouseHover();_muiDrawTouch();};
+// v0.43: per-scene mouse boxes live in mouse_scenes.js (MUI.hooks[scene.name](scene) runs after the scene has drawn)
+MUI.hooks={};
+drawTouch=function(){try{const f=typeof scene!=='undefined'&&scene&&MUI.hooks[scene.name];if(f)f(scene);if(MUI.hooks['*'])MUI.hooks['*'](scene);}catch(e){console.error(e);}drawMouseHover();_muiDrawTouch();};
