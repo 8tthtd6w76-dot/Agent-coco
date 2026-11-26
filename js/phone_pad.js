@@ -11,6 +11,7 @@
  TOUCH.on=true;
  window.touchRecalc=function(){};
  window.drawTouch=function(){};
+ window.muiOnTouchPad=function(){return false;};   // v0.41 mouse_ui: no hidden pad zones on the picture
  window.touchApply=function(I){for(const b in SIDE)if(SIDE[b])I[b]=true;};
  // the Enter Code screen reads gamepads through padEdges(): add our buttons as edges
  const PREV={};

@@ -25,7 +25,9 @@ function unlockAudio(){const a=audio();if(a&&a.state==='suspended')a.resume();}
 // ---------- shared list helpers ----------
 function roomBg(){bgPic('scenes/lair_lab',.62);}
 function listRows(o,R,x,y,w,rowH,vis,draw){const top=Math.max(0,Math.min(o.sel-Math.floor(vis/2),R.length-vis));
- R.slice(top,top+vis).forEach((r,j)=>{const i=top+j,s=i===o.sel,yy=y+j*rowH;rrect(x,yy,w,rowH-4,8,s?'rgba(255,210,58,.92)':'rgba(30,60,90,.65)',s?'#fff':'#2de2f5',1.5);draw(r,i,s,yy);});}
+ if(R.length)MUI.add(x,y,w,rowH*vis,{hl:false,wheel:d=>{const n=Math.max(0,Math.min(R.length-1,o.sel-d));if(n!==o.sel){o.sel=n;SFX.move();}}});
+ R.slice(top,top+vis).forEach((r,j)=>{const i=top+j,s=i===o.sel,yy=y+j*rowH;rrect(x,yy,w,rowH-4,8,s?'rgba(255,210,58,.92)':'rgba(30,60,90,.65)',s?'#fff':'#2de2f5',1.5);draw(r,i,s,yy);
+  MUI.add(x,yy,w,rowH-4,{click:()=>{o.sel=i;MUI.btn('ok');}});});}
 function eqBars(x,y,n=5,col='#ffd23a'){const on=MT.timer&&!muted;for(let i=0;i<n;i++){const h=on?6+Math.abs(Math.sin(TIME*(5+i*1.7)+i))*16:4;ctx.fillStyle=col;ctx.fillRect(x+i*6,y-h,4,h);}}
 
 // ---------- Music Room menu: a home studio you look at (v0.22). Each object on the desk is a button ----------
@@ -53,7 +55,7 @@ const MusicRoom={name:'musicroom',sel:0,
  make(){this.sel=0;return this;},
  items(){return [
   {n:'Home Studio',d:'Make a brand-new song on the laptop, FM-1, beat pad and guitar. Save up to 8 songs.',o:'laptop',go:()=>push(Groove.make(blankSong(),null))},
-  {n:'Preset Songs',d:'Four ready-made jams. Play them, or remix one in the Home Studio.',o:'fm1',go:()=>push(SongList.make('preset'))},
+  {n:'Preset Songs',d:PRESET_SONGS.length+' ready-made jams and covers. Play them, or remix one in the Home Studio.',o:'fm1',go:()=>push(SongList.make('preset'))},
   {n:'Jukebox',d:'Every track in the game: missions, bosses, screens and cutscenes.',o:'pad',go:()=>push(Jukebox.make())},
   {n:'My Songs ('+SAVE.songs.length+'/8)',d:'Play, remix or delete the songs you saved.',o:'guitar',go:()=>push(SongList.make('mine'))},
   {n:'Theme Picker',d:'Choose which song plays on the title screen, map, Lair, shop, deliveries and results.',o:'speakers',go:()=>push(ThemePicker.make())},
@@ -79,7 +81,7 @@ const MusicRoom={name:'musicroom',sel:0,
   // name tag above the highlighted object
   const o=MR_OBJ[this.sel],it=I[this.sel],tw=ctx.measureText(it.n).width;const lx=Math.max(104,Math.min(W-104,o.hit[0]+o.hit[2]/2)),ly=Math.max(54,o.hit[1]-6);
   rrect(lx-100,ly-24,200,26,10,'rgba(6,20,36,.92)','#ffd23a',2);text(it.n,lx,ly-5,15,'#fff','center',null);
-  panel(24,412,592,52,'#456');wrap(it.d,40,436,560,16,14,'#cfe',null);text('Arrows or tap: pick   Enter / A: open   Esc / B: back',W/2,476,10,'#9fb','center',null);
+  panel(24,412,592,52,'#456');wrap(it.d,40,436,560,16,14,'#cfe',null);text('Arrows, click or tap: pick   Enter / A: open   Esc / B: back',W/2,476,10,'#9fb','center',null);
   drawToast();}};
 // mouse / touch: tap an object to open it (hover or first tap selects on mouse)
 canvas.addEventListener('pointerdown',e=>{if(scene!==MusicRoom)return;const r=canvas.getBoundingClientRect(),mx=(e.clientX-r.left)*W/r.width,my=(e.clientY-r.top)*H/r.height,i=MusicRoom.pick(mx,my);
@@ -92,7 +94,7 @@ const SongList={name:'songlist',mode:'mine',sel:0,del:-1,playing:-1,
  rows(){return this.mode==='preset'?PRESET_SONGS.map(p=>({S:p.song,d:p.desc,style:p.style})):SAVE.songs.map(S=>({S,d:SCALES[S.sc].n+' in '+NOTE_N[S.key]+', '+S.bpm+' BPM, '+KITS[S.kit].n+' kit.',style:'Your song'}));},
  enter(){},resume(){if(this.playing<0)startMusic('studio');},
  update(){const R=this.rows();navList(this,R.length);
-  if(backPressed()){SFX.move();this.playing=-1;pop();return;}
+  if(backPressed()||MUI.esc){SFX.move();this.playing=-1;pop();return;}
   if(!R.length)return;const r=R[this.sel];
   if(anyPressed('ok')){unlockAudio();if(this.playing===this.sel){this.playing=-1;startMusic('studio');}else{this.playing=this.sel;playSongNow(r.S);}SFX.ok();return;}
   if(anyPressed('gadget')){SFX.ok();this.playing=-1;const S=cloneSong(r.S);if(this.mode==='preset'){S.name=S.name+' Remix';push(Groove.make(S,null));}else push(Groove.make(S,r.S.id));return;}
@@ -103,7 +105,7 @@ const SongList={name:'songlist',mode:'mine',sel:0,del:-1,playing:-1,
   listRows(this,R,34,76,572,46,6,(r,i,s,y)=>{text(r.S.name,52,y+20,16,s?'#102':'#fff','left',null);text(r.style,52,y+37,11,s?'#334':'#9fb','left',null);
    if(this.playing===i)eqBars(560,y+36,5,s?'#102':'#ffd23a');else text(r.S.bpm+' BPM',590,y+27,12,s?'#102':'#cfe','right',null);});
   if(R.length){const r=R[this.sel];panel(20,370,600,72,'#456');wrap(r.d,36,398,570,16,14,'#cfe',null);}
-  text(this.mode==='preset'?'A: play/stop   Y: remix in the studio   B: back':'A: play/stop   Y: edit   X: delete   B: back',W/2,H-14,12,'#9fb','center');drawToast();}};
+  MUI.chips(this.mode==='preset'?[{t:'A  Play / stop',b:'ok'},{t:'Y  Remix in the studio',b:'gadget'},{t:'B  Back',b:'back'}]:[{t:'A  Play / stop',b:'ok'},{t:'Y  Edit',b:'gadget'},{t:'X  Delete',b:'attack'},{t:'B  Back',b:'back'}],H-30);drawToast();}};
 
 // ---------- Jukebox ----------
 const Jukebox={name:'jukebox',sel:0,playing:-1,
@@ -112,12 +114,12 @@ const Jukebox={name:'jukebox',sel:0,playing:-1,
  enter(){},resume(){},
  update(){const R=this.rows();navList(this,R.length);
   if(anyPressed('ok')){unlockAudio();SFX.ok();if(this.playing===this.sel){this.playing=-1;startMusic('studio');}else{this.playing=this.sel;_startMusicBase(R[this.sel].name);}}
-  if(backPressed()){SFX.move();if(this.playing>=0)startMusic('studio');pop();}},
+  if(backPressed()||MUI.esc){SFX.move();if(this.playing>=0)startMusic('studio');pop();}},
  draw(){roomBg();text('JUKEBOX',W/2,44,28,'#ffd23a','center');text(this.rows().length+' tracks',W-30,44,13,'#9fb','right');
   const R=this.rows();panel(20,62,600,320);
   listRows(this,R,34,74,572,34,9,(r,i,s,y)=>{text(r.title,52,y+20,15,s?'#102':'#fff','left',null);text(TR[r.name].bpm+' BPM',590,y+20,12,s?'#102':'#cfe','right',null);if(this.playing===i)eqBars(500,y+26,5,s?'#102':'#ffd23a');});
   const r=R[this.sel];if(r){panel(20,390,600,56,'#456');wrap(r.desc||'',36,414,570,16,13,'#cfe',null);}
-  text('A: play/stop   B: back',W/2,H-14,12,'#9fb','center');}};
+  MUI.chips([{t:'A  Play / stop',b:'ok'},{t:'B  Back',b:'back'}],H-30);}};
 
 // ---------- Theme Picker ----------
 const ThemePicker={name:'themepicker',sel:0,
@@ -128,12 +130,16 @@ const ThemePicker={name:'themepicker',sel:0,
   const d=anyPressed('right')?1:anyPressed('left')?-1:0;
   if(d){const O=this.opts();let i=O.indexOf(SAVE.musicPick[scr]||null);if(i<0)i=0;i=(i+d+O.length)%O.length;if(O[i])SAVE.musicPick[scr]=O[i];else delete SAVE.musicPick[scr];save();SFX.move();}
   if(anyPressed('ok')){unlockAudio();SFX.ok();const S=pickSong(SAVE.musicPick[scr]);if(S)playSongNow(S);else _startMusicBase(scr);}
-  if(backPressed()){SFX.move();startMusic('studio');pop();}},
+  if(backPressed()||MUI.esc){SFX.move();startMusic('studio');pop();}},
  draw(){roomBg();text('THEME PICKER',W/2,44,28,'#ffd23a','center');panel(20,62,600,330);
   PICK_SCREENS.forEach(([k,n],i)=>{const y=78+i*50,s=i===this.sel;rrect(34,y,572,42,9,s?'rgba(255,210,58,.92)':'rgba(30,60,90,.65)',s?'#fff':'#2de2f5',1.5);
-   text(n,52,y+27,16,s?'#102':'#fff','left',null);const pk=SAVE.musicPick[k];text((s?'< ':'')+pickName(pk)+(s?' >':''),590,y+27,15,s?'#102':pk?'#ffd23a':'#9fb','right',null);});
+   text(n,52,y+27,16,s?'#102':'#fff','left',null);const pk=SAVE.musicPick[k];text((s?'< ':'')+pickName(pk)+(s?' >':''),590,y+27,15,s?'#102':pk?'#ffd23a':'#9fb','right',null);
+   // mouse: left part = pick + preview, song name: left half = previous song, right half = next song
+   MUI.add(34,y,296,42,{click:()=>{this.sel=i;MUI.btn('ok');},wheel:d=>{this.sel=i;MUI.btn(d>0?'right':'left');}});
+   MUI.add(330,y,138,42,{click:()=>{this.sel=i;MUI.btn('left');},wheel:d=>{this.sel=i;MUI.btn(d>0?'right':'left');}});
+   MUI.add(468,y,138,42,{click:()=>{this.sel=i;MUI.btn('right');},wheel:d=>{this.sel=i;MUI.btn(d>0?'right':'left');}});});
   panel(20,400,600,44,'#456');text('Pick any preset or your own song for each screen. Game default keeps the original track.',W/2,427,12,'#cfe','center',null);
-  text('Left/Right: change song   A: preview   B: back',W/2,H-14,12,'#9fb','center');}};
+  MUI.chips([{t:'<  Left: previous song',b:'left'},{t:'Right: next song  >',b:'right'},{t:'A  Preview',b:'ok'},{t:'B  Back',b:'back'}],H-30);}};
 
 // ---------- Home Studio (Groove Machine): laptop sequencer + FM-1 + beat pad + guitar ----------
 const GROWS=[{n:'KICK',k:'k',col:'#ff5a5a'},{n:'SNARE',k:'s',col:'#ffb03a'},{n:'CLAP',k:'c',col:'#ffd23a'},{n:'HI-HAT',k:'h',col:'#7cf07c'},{n:'OPEN HAT',k:'O',col:'#3ee0b0'},
@@ -183,12 +189,12 @@ const Groove={name:'groove',
   {n:'New random name',go:()=>{this.S.name=randSongName();this.dirty=true;toast('Name: '+this.S.name,'#2de2f5');}},
   {n:'Clear this pattern',go:()=>{const P=this.pat();PAT_KEYS.forEach(k=>P[k]=k==='lead'?'.'.repeat(64):blank16);delete P.bass4;delete P.ch4;delete P.fill;if(this.pi>0)delete P.bars;this.refresh();this.menu=null;toast('Pattern '+'ABC'[this.pi]+' cleared','#2de2f5');}},
   {n:'Clear everything',go:()=>{this.pi=0;const n=this.S.name,sk=this.S.skin;this.S=blankSong();this.S.name=n;this.S.skin=sk;['k','s','h','bass'].forEach(k=>this.S[k]=k==='bass'?blank16:blank16);this.refresh();this.menu=null;toast('Clean slate!','#2de2f5');}},
-  {n:this.dirty?'Exit (unsaved changes lost)':'Exit',go:()=>{this.stop();pop();}}]);},
+  {n:!this.dirty?'Exit':this.menu&&this.menu.arm?'Really exit? Press again':'Exit without saving',go:()=>{if(this.dirty&&!this.menu.arm){this.menu.arm=true;this.menu.armSel=this.menu.sel;SFX.hurt();toast('Unsaved changes! Save first, or press Exit again.','#ff5a8a');return;}this.stop();pop();}}]);},
  save(){const S=this.S;if(this.slot){const i=SAVE.songs.findIndex(x=>x.id===this.slot);if(i>=0){S.id=this.slot;SAVE.songs[i]=cloneSong(S);}}
   else{if(SAVE.songs.length>=8){toast('Song shelf full (8). Delete one in My Songs.','#ff5a8a');SFX.hurt();return;}S.id=Date.now().toString(36)+(Math.random()*1e4|0).toString(36);this.slot=S.id;SAVE.songs.push(cloneSong(S));}
   save();this.dirty=false;this.menu=null;SFX.ok();playStinger('unlock');toast('Saved: '+S.name);},
- update(){if(this.menu){const I=this.menuItems();navList(this.menu,I.length);if(anyPressed('ok')){SFX.ok();I[this.menu.sel].go();return;}if(backPressed()){this.menu=null;SFX.move();}return;}
-  if(backPressed()){this.menu={sel:0};SFX.move();return;}
+ update(){if(this.menu){const I=this.menuItems();navList(this.menu,I.length);if(this.menu.sel!==this.menu.armSel)this.menu.arm=false;if(anyPressed('ok')){SFX.ok();I[this.menu.sel].go();return;}if(backPressed()||MUI.esc){this.menu=null;SFX.move();}return;}
+  if(backPressed()||MUI.esc){this.menu={sel:0};SFX.move();return;}
   if(anyPressed('start')){if(this.playing)this.stop();else this.play();SFX.move();return;}
   if(anyPressed('up')){this.r=(this.r+11)%12;SFX.move();}if(anyPressed('down')){this.r=(this.r+1)%12;SFX.move();}
   if(this.r===11){const S=this.S,arr=songArr(S);if(this.c>arr.length)this.c=arr.length;if(this.c>7)this.c=7;
@@ -277,12 +283,63 @@ const Groove={name:'groove',
   text((this.pi?'[PATTERN '+'ABC'[this.pi]+'] ':'')+info,120,418,11,'#ffd23a','left',null);
   // speakers thump on the desk edge
   if(thump){ctx.fillStyle=SK.a;ctx.beginPath();ctx.arc(612,412,4,0,7);ctx.fill();}
-  text('A: place/remove  Y/X: higher/lower  Start: play/stop  B: menu   Tap the dice: GROOVE',W/2,462,12,'#fff','center');
-  text('Keyboard: Space place, G or / higher, F or . lower, Tab or Enter play, Q or R-Shift menu',W/2,476,10,'#cfe','center',null);
+  if(!this.menu){grooveHits(this);MUI.chips(grooveChips(this),441,20);}
+  text(MUI.mouseRecent()?'Mouse: click a step to place/remove, drag a note up/down for pitch, click FM-1 keys to write lead notes, scroll or click knob sides':'Keyboard: Space place, G or / higher, F or . lower, Tab or Enter play, Esc or Q menu. Hold an arrow to move fast.',W/2,474,MUI.mouseRecent()?9:10,'#cfe','center',null);
   if(this.menu){dim(.55);panel(190,110,260,296,SK.a);text('SONG MENU',320,140,20,'#ffd23a','center');
-   this.menuItems().forEach((it,i)=>{const y=156+i*40,s=i===this.menu.sel;rrect(206,y,228,34,9,s?'rgba(255,210,58,.95)':'rgba(30,60,90,.85)',s?'#fff':'#2de2f5',2);text(it.n,320,y+22,13,s?'#102':'#fff','center',null);});}
+   MUI.add(0,0,W,H,{hl:false,click:()=>{this.menu=null;SFX.move();}});MUI.add(190,110,260,296,{hl:false,click:()=>{}});
+   this.menuItems().forEach((it,i)=>{const y=156+i*40,s=i===this.menu.sel;rrect(206,y,228,34,9,s?'rgba(255,210,58,.95)':'rgba(30,60,90,.85)',s?'#fff':'#2de2f5',2);text(it.n,320,y+22,13,s?'#102':'#fff','center',null);
+    MUI.add(206,y,228,34,{hl:false,hover:()=>{if(this.menu&&this.menu.sel!==i){this.menu.sel=i;SFX.move();}},click:()=>{if(this.menu){this.menu.sel=i;MUI.btn('ok');}}});});}
   drawToast();}};
 
-// tap the GROOVE dice on the FM-1 (mouse or touch)
-canvas.addEventListener('pointerdown',e=>{if(scene!==Groove||Groove.menu)return;const r=canvas.getBoundingClientRect(),mx=(e.clientX-r.left)*W/r.width,my=(e.clientY-r.top)*H/r.height,[gx,gy,gw,gh]=GROOVE_BTN;
- if(mx>=gx&&mx<=gx+gw&&my>=gy&&my<=gy+gh){unlockAudio();Groove.randomize();}});
+
+// ---------- mouse / tap boxes for the Home Studio (v0.41). Same layout numbers as Groove.draw ----------
+function grooveKnobBox(G,k,x,y,w,h){const turn=d=>{G.r=0;G.kn=k;G.knob(d);};
+ MUI.add(x,y,w,h,{arrows:true,click:mx=>turn(mx<x+w/2?-1:1),right:()=>turn(-1),wheel:d=>turn(d)});}
+// a lead note for an FM-1 key: the nearest note of the song's scale
+function grooveKeyDeg(S,midi){let best=0,bd=1e9;for(let v=0;v<15;v++){const d=Math.abs(leadMidi(S,v)-midi);if(d<bd){bd=d;best=v;}}return best;}
+function grooveKey(G,k){const S=G.S,base=leadMidi(S,0)-((leadMidi(S,0)%12+12)%12),v=grooveKeyDeg(S,base+k);G.lastLead=v;
+ if(G.r===9){const P=G.pat(),i=G.lp*16+G.c;P.lead=setCh(P.lead,i,String.fromCharCode(97+v));G.refresh();G.preview();
+  if(G.c<15)G.c++;else{G.c=0;G.lp=(G.lp+1)%G.nbars();}}
+ else{const r=G.r;G.r=9;const P=G.pat(),i=G.lp*16+G.c,old=P.lead[i];P.lead=setCh(P.lead,i,String.fromCharCode(97+v));G.preview();P.lead=setCh(P.lead,i,old);G.r=r;
+  toast('Lead note '+songNoteName(leadMidi(S,v))+'. Click the LEAD row first to write notes.','#2de2f5');}}
+function grooveHits(G){const S=G.S,NB=G.nbars(),x0=182,cw=26,y0=166,rh=22,arr=songArr(S),P=patBars(S,'ABC'[G.pi]);
+ // laptop transport fields (TEMPO .. PATTERN) and the FM-1 sound knobs: click the left half to turn down, right half to turn up
+ for(let k=0;k<6;k++)grooveKnobBox(G,k,118+k*85,132,81,28);
+ for(let k=6;k<12;k++){const cx=336+(k-6)*54;grooveKnobBox(G,k,cx-26,12,52,54);}
+ {const [gx,gy,gw,gh]=GROOVE_BTN;MUI.add(gx,gy,gw,gh,{click:()=>G.randomize(),right:()=>G.undoGroove()});}
+ // FM-1 keys: hear a note, or write it into the LEAD row at the cursor
+ for(let k=0;k<25;k++)MUI.add(164+k*18.4,67,18.4,26,{click:()=>grooveKey(G,k)});
+ // beat pad: pick that row (and hear it)
+ for(let i=0;i<8;i++)MUI.add(14+(i%4)*32,16+Math.floor(i/4)*40,28,34,{click:()=>{G.r=i+1;G.preview();SFX.move();}});
+ // row names: pick the row; on LEAD, click again (or scroll) for the next bar of the melody
+ GROWS.forEach((R,ri)=>{const isL=R.k==='lead';MUI.add(104,y0+ri*rh,78,rh,{click:()=>{if(isL&&G.r===9)G.lp=(G.lp+1)%NB;G.r=ri+1;SFX.move();},
+   wheel:isL?d=>{G.r=9;G.lp=(G.lp-d+NB)%NB;SFX.move();}:null});
+  for(let c=0;c<16;c++){const pick=()=>{G.menu=null;G.r=ri+1;G.c=c;};
+   MUI.add(x0+c*cw,y0+ri*rh,cw,rh,{
+    wheel:R.notes?d=>{pick();G.pitch(d);}:null,
+    right:()=>{pick();const {s,i}=G.cellKey();if(G.pat()[s][i]!=='.')G.toggle();},
+    down:(mx,my)=>{pick();const {s,i}=G.cellKey(),was=G.pat()[s][i];
+     if(!R.notes){G.toggle();const paint=G.pat()[s][i]!=='.';  // drag along the row to paint (or erase) more steps
+      return {move:(mx2)=>{const c2=Math.floor((mx2-x0)/cw);if(c2<0||c2>15||c2===G.c)return;G.c=c2;const k=G.cellKey();if((G.pat()[k.s][k.i]!=='.')!==paint)G.toggle();}};}
+     if(was==='.')G.toggle();let done=0,moved=false;  // bass / lead: drag up = higher, down = lower; a plain click on a note removes it
+     return {move:(mx2,my2)=>{const want=Math.trunc((my-my2)/7);while(done!==want){const d=want>done?1:-1;G.pitch(d);done+=d;moved=true;}},
+      up:()=>{if(!moved&&was!=='.')G.toggle();}};}});}});
+ // BARS: click a bar to pick it, click it again for the next chord type; scroll / right click = root up / down
+ const bw=NB>4?52:104;MUI.add(104,y0+9*rh,78,20,{click:()=>{G.r=10;SFX.move();}});
+ P.forEach((_,i)=>{const pickBar=()=>{G.r=10;G.c=i;};MUI.add(x0+i*bw,y0+9*rh+2,bw,18,{
+  click:()=>{if(G.r===10&&G.c===i)MUI.btn('ok');else{pickBar();G.preview();SFX.move();}},
+  wheel:d=>{pickBar();MUI.btn(d>0?'gadget':'attack');},right:()=>{pickBar();MUI.btn('attack');}});});
+ // ORDER: click a slot to view that pattern, "+" adds a section; scroll / right click = change the slot's pattern
+ const oy=y0+9*rh+22;MUI.add(104,oy,78,20,{click:()=>{G.r=11;SFX.move();}});
+ for(let i=0;i<=arr.length&&i<8;i++){const add=i===arr.length;MUI.add(x0+i*52,oy,52,18,{
+  click:()=>{G.r=11;G.c=i;if(add)MUI.btn('ok');else{G.pi='ABC'.indexOf(arr[i]);G.lp=0;SFX.move();}},
+  wheel:add?null:d=>{G.r=11;G.c=i;MUI.btn(d>0?'gadget':'attack');},right:add?null:()=>{G.r=11;G.c=i;MUI.btn('attack');}});}}
+// context buttons under the laptop: they press the same buttons as the pad, so they always match the hints
+function grooveChips(G){const C=[],arr=songArr(G.S),R=G.r>0&&G.r<10?GROWS[G.r-1]:null;
+ if(G.r===0&&G.kn===12)C.push({t:'A  GROOVE!',b:'ok'},{t:'X  Undo',b:'attack'});
+ else if(G.r===0)C.push({t:'X  Turn down',b:'attack'},{t:'Y  Turn up',b:'gadget'});
+ else if(G.r===10)C.push({t:'X  Root down',b:'attack'},{t:'Y  Root up',b:'gadget'},{t:'A  Chord type',b:'ok'});
+ else if(G.r===11){if(G.c>=arr.length)C.push({t:'A  Add section',b:'ok'});else C.push({t:'X  Prev pattern',b:'attack'},{t:'Y  Next pattern',b:'gadget'},{t:'A  Remove slot',b:'ok'});}
+ else{C.push({t:'A  Place / remove',b:'ok'});if(R&&R.notes)C.push({t:'X  Lower',b:'attack'},{t:'Y  Higher',b:'gadget'});
+  if(R&&R.k==='lead'&&G.nbars()>1)C.push({t:'Next bar',fn:()=>{G.lp=(G.lp+1)%G.nbars();}});}
+ C.push({t:'Start  '+(G.playing?'Stop':'Play'),b:'start'},{t:'B  Menu',b:'back'});return C;}
