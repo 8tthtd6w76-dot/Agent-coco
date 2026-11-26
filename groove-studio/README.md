@@ -12,7 +12,7 @@ A song-making studio for the Mac, separate from the Agent Coco game. Electron ap
 
 ## Install or update on the Mac
 ```
-curl -sL https://raw.githubusercontent.com/8tthtd6w76-dot/Agent-coco/claude/project-thread-39i250/groove-studio/install.sh | bash
+curl -sL https://raw.githubusercontent.com/8tthtd6w76-dot/Agent-coco/refs/heads/claude/project-thread-39i250/groove-studio/install.sh | bash
 ```
 After the first time, double-click "Update Groove Studio" on the Desktop.
 
