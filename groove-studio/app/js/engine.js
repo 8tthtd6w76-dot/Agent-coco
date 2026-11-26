@@ -1,6 +1,8 @@
 // ===== Groove Studio engine: transport, scheduler, live playing, recording (audio + notes), WAV export =====
 'use strict';
 let MIX=null;
+// VIS: sounds about to play, so the screen can light each instrument up in its color at the moment it is heard
+const VIS=[];
 const T={playing:false,rec:null,b0:0,t0:0,L:0,timer:null,head:0,lastHead:0,listeners:[]};
 async function ensureAudio(){if(AC){if(AC.state!=='running')await AC.resume();return;}
  AC=new (window.AudioContext||window.webkitAudioContext)({latencyHint:'interactive'});MIX=makeMixer(AC);MUS={a:AC,rev:MIX.rev};
@@ -30,12 +32,14 @@ function sch(M,s0,s1,timeOf,jump,stopAt){const sp=spb(),sw=P.swing*sp/4;
    for(let k=Math.max(0,Math.floor((s0-c.start)/pl));;k++){const rs=c.start+k*pl;if(rs>=s1||rs>=ce)break;const re=Math.min(rs+pl,ce);
     let st=null;if(rs>=s0)st=rs;else if(jump&&s0<re)st=s0;if(st==null)continue;
     const en=Math.min(re,stopAt==null?Infinity:stopAt);if(en<=st)continue;
-    playAudio(M,tr,c,b,timeOf(st),(st-rs)*sp,timeOf(en),rs===c.start&&st===rs,re===ce);}
+    playAudio(M,tr,c,b,timeOf(st),(st-rs)*sp,timeOf(en),rs===c.start&&st===rs,re===ce);
+    if(M===MIX)for(let q=Math.ceil(st*2)/2;q<en;q+=.5)VIS.push({t:timeOf(q),tr:tr.id,p:-1});}   // a voice glows on every 8th while it sounds
    continue;}
   for(let k=Math.max(0,Math.floor((s0-c.start)/pl)-1);;k++){const rs=c.start+k*pl;if(rs>=s1||rs>=ce)break;
    for(const n of c.notes){if(n.t>=pl)continue;const at=rs+n.t;if(at<s0||at>=s1||at>=ce)continue;
     const st16=Math.round(at*4);const swung=Math.abs(at*4-st16)<.01&&st16%2?sw:0;const t=timeOf(at)+swung;
-    if(tr.type==='drums')playPad(M,tr,n.p,t,n.v);else playNote(M,tr,n.m,t,Math.min(n.d,ce-at)*sp,n.v);}}}}
+    if(tr.type==='drums')playPad(M,tr,n.p,t,n.v);else playNote(M,tr,n.m,t,Math.min(n.d,ce-at)*sp,n.v);
+    if(M===MIX)VIS.push({t,tr:tr.id,p:tr.type==='drums'?n.p:-1});}}}}
  if(M===MIX&&P.metro||T.rec&&T.rec.click)for(let b=Math.ceil(s0-1e-6);b<s1;b++)if(M===MIX)clickAt(M,timeOf(b),((b%4)+4)%4===0);}
 function playAudio(M,tr,c,b,t,off,tEnd,fadeIn,fadeOut){const a=M.a,s=a.createBufferSource();s.buffer=b;const g=a.createGain(),gv=c.gain==null?1:c.gain,sp=spb();
  const now=a.currentTime,lag=Math.max(0,now-t);t+=lag;off+=lag;const so=(c.off||0)+off;if(so>=b.duration||tEnd<=t)return;
@@ -60,7 +64,7 @@ function headNow(){if(!T.playing)return T.head;return songAt((AC.currentTime-T.t
 async function play(from){await ensureAudio();if(T.playing)stop(true);updateMix();
  T.b0=from==null?T.head:from;T.t0=AC.currentTime+.06;T.L=0;T.playing=true;T.srcs=[];tick();T.timer=setInterval(tick,25);emit('play');}
 function stop(keep){if(!T.playing)return;const h=headNow();T.playing=false;clearInterval(T.timer);
- T.srcs.forEach(s=>{try{s.stop();}catch(e){}});T.srcs=[];
+ T.srcs.forEach(s=>{try{s.stop();}catch(e){}});T.srcs=[];VIS.length=0;
  // cut ringing synth notes / drum tails by ducking each strip briefly
  if(MIX)for(const id in MIX.strips){const g=MIX.strips[id].in.gain,t=AC.currentTime;g.cancelScheduledValues(t);g.setValueAtTime(g.value,t);g.linearRampToValueAtTime(0,t+.03);g.setValueAtTime(0,t+.25);g.linearRampToValueAtTime(1,t+.27);}
  if(T.rec)finishRecord();if(!keep)T.head=Math.max(0,h<0?0:h);emit('stop');}
@@ -68,8 +72,8 @@ function emit(e){T.listeners.forEach(f=>f(e));}
 
 // ---------- live input (pads + keys), and recording notes ----------
 const HELD={};
-function livePad(tr,p,v=1){if(!AC)return;playPad(MIX,tr,p,AC.currentTime,v);if(T.rec&&T.rec.kind==='notes'&&T.rec.tr===tr.id)recNote({p,v});}
-function liveKeyDown(tr,m,v=.9){if(!AC||HELD[tr.id+':'+m])return;const old=MUS;MUS={a:AC,rev:MIX.rev};
+function livePad(tr,p,v=1){if(!AC)return;playPad(MIX,tr,p,AC.currentTime,v);VIS.push({t:0,tr:tr.id,p});if(T.rec&&T.rec.kind==='notes'&&T.rec.tr===tr.id)recNote({p,v});}
+function liveKeyDown(tr,m,v=.9){if(!AC||HELD[tr.id+':'+m])return;VIS.push({t:0,tr:tr.id,p:-1});const old=MUS;MUS={a:AC,rev:MIX.rev};
  const h=fm1Start(tr.patch,AC.currentTime,mtof(m),v,stripFor(MIX,tr).in);MUS=old;HELD[tr.id+':'+m]={h,b:T.playing?headNow():null,m,v};}
 function liveKeyUp(tr,m){const k=tr.id+':'+m,H=HELD[k];if(!H)return;delete HELD[k];H.h.stop(AC.currentTime);
  if(T.rec&&T.rec.kind==='notes'&&T.rec.tr===tr.id&&H.b!=null){let d=headNow()-H.b;if(d<0)d+=P.loop.b-P.loop.a;recNote({m,v:H.v,d:Math.max(.125,d)},H.b);}}

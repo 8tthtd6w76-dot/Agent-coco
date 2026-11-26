@@ -144,3 +144,25 @@ canvas.wave{width:100%;height:120px;background:#0f1116;border-radius:8px;border:
 .ctxmenu hr{border:0;border-top:1px solid var(--line2);margin:4px 2px}
 #drop{position:fixed;inset:0;background:rgba(123,140,255,.15);border:3px dashed var(--acc);display:none;align-items:center;justify-content:center;font-size:22px;z-index:70;pointer-events:none}
 #drop.show{display:flex}
+
+/* panel tabs */
+.tabs{display:flex;gap:2px;background:#0d0f13;border:1px solid var(--line);border-radius:9px;padding:2px;flex:none}
+.tabs button{border:0;background:transparent;padding:4px 12px;border-radius:7px;font-weight:600;color:var(--dim)}
+.tabs button.on{background:#2a3160;color:#fff}
+/* quick loop */
+.qgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.qtile{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border-radius:12px;background:color-mix(in srgb,var(--c) 16%,#1c2029);border:1px solid color-mix(in srgb,var(--c) 45%,#1c2029);border-bottom:4px solid var(--c);font-weight:600;font-size:12px}
+.qtile .em{font-size:20px;line-height:1}
+.qtile.on{background:color-mix(in srgb,var(--c) 45%,#1c2029);border-color:#fff;color:#fff}
+.qplay{font-size:16px;font-weight:700;padding:8px 22px;border-radius:10px;background:#1f3a28;border-color:#6bcb77;color:#bff5c8}
+.qplay.on{background:#4a1c24;border-color:var(--rec);color:#ffd1d6}
+.qtap{flex:1;min-height:120px;border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:color-mix(in srgb,var(--c) 22%,#1c2029);border:2px solid var(--c);font-size:13px;color:#fff}
+.qtap .em{font-size:34px}.qtap b{font-size:26px;letter-spacing:.12em}
+.qtap:active{background:var(--c);color:#111}
+.qkeys{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;flex:1;min-height:110px}
+.qkey{border-radius:12px;background:color-mix(in srgb,var(--c) 18%,#1c2029);border:2px solid color-mix(in srgb,var(--c) 70%,#1c2029);display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;padding-bottom:10px;color:#fff}
+.qkey b{font-size:18px}.qkey span{font-size:10px;color:var(--dim)}
+.qkey:active{background:var(--c);color:#111}
+.qlive{display:flex;flex-wrap:wrap;gap:5px}
+.qlive span{padding:3px 8px;border-radius:999px;font-size:11px;background:color-mix(in srgb,var(--c) 25%,#1c2029);border:1px solid var(--c);color:#fff}
+.th .cbar{transform-origin:left center}

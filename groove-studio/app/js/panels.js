@@ -6,7 +6,7 @@ const NOTE_NAMES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const inScale=m=>SCALES[P.scale].s.includes((((m-P.key)%12)+12)%12);
 const PAD_KEYS=['z','x','c','v','a','s','d','f','q','w','e','r','1','2','3','4'];   // pad 1 = Z (bottom-left), like a 4x4 pad controller
 const PIANO_KEYS='awsedftgyhujkolp;\'';                                             // A = C, W = C# ...
-const PANEL={pad:0,oct:4,len:.25,editClip:null};
+const PANEL={pad:0,oct:4,len:.25,editClip:null,tab:'track'};
 let EDIT=null;   // the live editor canvas (redrawn each frame while playing)
 
 function panelClip(tr){let c=selClip();if(c&&tr.clips.includes(c))return c;c=tr.clips.find(c=>T.head>=c.start&&T.head<c.start+c.len)||tr.clips[0]||null;if(c)UI.sel.clip=c.id;return c;}
@@ -17,9 +17,10 @@ function btn(txt,fn,title,cls){const b=el('button',cls||'',txt);b.onclick=fn;if(
 function sel(opts,val,fn,title){const s=el('select');opts.forEach((o,i)=>{const op=el('option','',esc(o));op.value=i;s.appendChild(op);});s.value=val;s.onchange=()=>fn(+s.value);if(title)s.title=title;return s;}
 
 function renderPanel(){const Pn=$('#panel');Pn.innerHTML='';EDIT=null;const tr=selTrack();
- if(!tr){Pn.appendChild(el('div','ph','<div class="tt">Pick a track</div>'));const b=el('div','pb');b.appendChild(el('div','empty','<div>Click a track on the left to open its tool here.</div><div class="hint">Voice = record and loop · Beat = pads and steps · Synth = FM-1 and piano roll</div>'));Pn.appendChild(b);return;}
+ if(PANEL.tab==='quick'){quickPanel(Pn);return;}
+ if(!tr){const h0=el('div','ph');h0.append(panelTabs(),el('div','tt','Pick a track'));Pn.appendChild(h0);const b=el('div','pb');b.appendChild(el('div','empty','<div>Click a track on the left to open its tool here.</div><div class="hint">Voice = record and loop · Beat = pads and steps · Synth = FM-1 and piano roll</div>'));Pn.appendChild(b);return;}
  const h=el('div','ph');h.style.setProperty('--c',tr.color);h.innerHTML=`<div class="tt"><i></i>${esc(tr.name)}<span class="hint">${({audio:'Voice recorder',drums:'Beat pads',synth:'FM-1 synth'})[tr.type]}</span></div>`;
- const st=el('div','strip');st.id='strip';h.appendChild(st);Pn.appendChild(h);syncStrip();
+ h.prepend(panelTabs());const st=el('div','strip');st.id='strip';h.appendChild(st);Pn.appendChild(h);syncStrip();
  const body=el('div','pb');Pn.appendChild(body);
  ({audio:audioPanel,drums:drumPanel,synth:synthPanel})[tr.type](tr,body);}
 function syncStrip(){const st=$('#strip'),tr=selTrack();if(!st||!tr)return;st.innerHTML='';const pct=v=>Math.round(v*100)+'%';

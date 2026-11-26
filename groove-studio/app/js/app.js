@@ -111,7 +111,7 @@ function initScroll(){const W=$('#lanesWrap'),H=$('#headList');W.addEventListene
  H.addEventListener('wheel',e=>{W.scrollTop+=e.deltaY;},{passive:true});}
 
 // ---------- every frame: playhead, meters, live editor ----------
-function frame(){drawHead();if(MIX){const m=$('#master'),g=m.getContext('2d'),lv=Math.min(1,meterLevel(MIX.an));g.clearRect(0,0,14,36);g.fillStyle=lv>.95?'#ff4d5e':'#6bcb77';g.fillRect(2,36-lv*36,10,lv*36);
+function frame(){drawHead();runLights();quickTick();if(MIX){const m=$('#master'),g=m.getContext('2d'),lv=Math.min(1,meterLevel(MIX.an));g.clearRect(0,0,14,36);g.fillStyle=lv>.95?'#ff4d5e':'#6bcb77';g.fillRect(2,36-lv*36,10,lv*36);
   document.querySelectorAll('.th').forEach(h=>{const s=MIX.strips[h.dataset.id];const i=h.querySelector('.meter i');if(i)i.style.height=Math.min(100,(s?meterLevel(s.an):0)*100)+'%';});}
  const vu=$('#micVu');if(vu&&MIC){vu.style.width=Math.min(100,MIC.lvl*100)+'%';MIC.lvl*=.92;}
  if(T.playing&&EDIT)EDIT.draw();requestAnimationFrame(frame);}

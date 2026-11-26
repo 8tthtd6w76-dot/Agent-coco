@@ -8,7 +8,7 @@ const snapB=(b,alt)=>{const s=alt?0:UI.snap;return s?Math.round(b/s)*s:Math.roun
 const TYPE_LABEL={audio:'VOICE',drums:'BEAT',synth:'SYNTH'};
 function selTrack(){return trackById(UI.sel.track)||null;}
 function selClip(){const r=clipById(UI.sel.clip);return r?r.c:null;}
-function select(trId,clipId){UI.sel.track=trId;UI.sel.clip=clipId||null;renderTimeline();renderPanel();}
+function select(trId,clipId){if(PANEL.tab==='quick'&&typeof qFinishLayer==='function'){qFinishLayer();PANEL.tab='track';}UI.sel.track=trId;UI.sel.clip=clipId||null;renderTimeline();renderPanel();}
 
 function timelineBeats(){return Math.max(64,Math.ceil((songEnd()+32)/4)*4,P.loop.b+16);}
 function renderTimeline(){const W=timelineBeats()*UI.ppb;$('#lanesInner').style.width=W+'px';
