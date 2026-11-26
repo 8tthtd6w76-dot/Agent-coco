@@ -171,7 +171,7 @@ function compileTrack(def){
     else at(b,st,[COMPI[C.i],ch,len*sd,v]);}}
   if(def.pad)at(b,0,[COMPI[def.pad.i||'pad'],B.chord,16*sd,def.pad.v||1]);}
  // leads
- for(const L of [].concat(def.lead||[])){let s=(L.at||0)*16;const fn=LEADI[L.i||'lead'];
+ for(const L of [].concat(def.lead||[])){let s=(L.at||0)*16;const fn=typeof L.i==='function'?L.i:LEADI[L.i||'lead'];
   for(const tok of L.mel.trim().split(/\s+/)){const [n,l]=tok.split('/'),len=+l;if(n!=='r')ev[s%N].push([fn,nm(n)+(L.o||0),len*sd*.92,L.v||1]);s+=len;}}
  return {def,sd,N,ev,swing:def.swing||0,vol:def.vol||1};}
 

@@ -83,7 +83,7 @@ function songDef(S){const P=songBars(S),K=KITS[S.kit],arr=songArr(S);
  if(pos.length){if(pos[0]>0)tok.push('r/'+pos[0]);
   pos.forEach((p,j)=>{const nx=j+1<pos.length?pos[j+1]:T,len=Math.min(nx-p,S.lh||4);tok.push(songNoteName(leadMidi(S,leadAll.charCodeAt(p)-97))+'/'+len);if(nx-p>len)tok.push('r/'+(nx-p-len));});}
  const def={title:S.name,desc:'Made in the Groove Machine',bpm:S.bpm,swing:SWINGS[S.sw],prog,drums,dseq,
-  bassI:BASSES[S.bi],bass:bassA,comp:[{i:KEYSI[S.ci],h:hitsA,v:.8}],lead:tok.length?{i:LEADS[S.li],mel:tok.join(' '),v:.9,o:S.lo||0}:[],vol:.95};
+  bassI:BASSES[S.bi],bass:bassA,comp:[{i:KEYSI[S.ci],h:hitsA,v:.8}],lead:tok.length?{i:LEADS[S.li]==='fm1'&&typeof fm1Inst==='function'?fm1Inst(S):LEADS[S.li],mel:tok.join(' '),v:.9,o:S.lo||0}:[],vol:.95};
  if(S.pad)def.pad={v:.6};return def;}
 
 // ---------- preset songs (original tunes, each in the style of a band Michael likes) ----------

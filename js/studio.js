@@ -54,10 +54,10 @@ function mrSprite(o,sel,playing){const t=Math.floor(TIME*6)%4;
 const MusicRoom={name:'musicroom',sel:0,
  make(){this.sel=0;return this;},
  items(){return [
-  {n:'Home Studio',d:'Make a brand-new song on the laptop, FM-1, beat pad and guitar. Save up to 8 songs.',o:'laptop',go:()=>push(Groove.make(blankSong(),null))},
+  {n:'Home Studio',d:'Make a brand-new song on the laptop grid or the FM-1 synth. Save up to 24 songs, or save them as files.',o:'laptop',go:()=>push(Groove.make(blankSong(),null))},
   {n:'Preset Songs',d:PRESET_SONGS.length+' ready-made jams and covers. Play them, or remix one in the Home Studio.',o:'fm1',go:()=>push(SongList.make('preset'))},
   {n:'Jukebox',d:'Every track in the game: missions, bosses, screens and cutscenes.',o:'pad',go:()=>push(Jukebox.make())},
-  {n:'My Songs ('+SAVE.songs.length+'/8)',d:'Play, remix or delete the songs you saved.',o:'guitar',go:()=>push(SongList.make('mine'))},
+  {n:'My Songs ('+SAVE.songs.length+'/'+SONG_MAX+')',d:'Play, remix or delete the songs you saved.',o:'guitar',go:()=>push(SongList.make('mine'))},
   {n:'Theme Picker',d:'Choose which song plays on the title screen, map, Lair, shop, deliveries and results.',o:'speakers',go:()=>push(ThemePicker.make())},
   {n:'Back to the Lair',d:'Head back out the door.',o:'door',go:()=>pop()}];},
  enter(){unlockAudio();startMusic('studio');Object.keys(MR_CELL).forEach(mrImg);},resume(){startMusic('studio');},
@@ -148,12 +148,12 @@ const GKNOBS=[
  {n:'TEMPO',txt:S=>S.bpm,fr:S=>(S.bpm-70)/70,ch:(S,d)=>S.bpm=Math.max(70,Math.min(140,S.bpm+d*2))},
  {n:'SWING',k:'sw',max:4,txt:S=>SWING_T[S.sw]},{n:'KEY',k:'key',max:12,txt:S=>NOTE_N[S.key]},{n:'SCALE',k:'sc',max:3,txt:S=>SCALES[S.sc].n},
  {n:'CHORDS',k:'pr',max:8,txt:S=>S.bars?'CUSTOM':PROGS[S.pr].n},{n:'PATTERN',k:'patt',txt:S=>'ABC'[Groove.pi],fr:S=>Groove.pi/2,ch:(S,d)=>{Groove.pi=(Groove.pi+d+3)%3;}},{n:'KIT',k:'kit',max:5,txt:S=>KITS[S.kit].n},{n:'BASS',k:'bi',max:5,txt:S=>BASS_T[S.bi]},
- {n:'KEYS',k:'ci',max:8,txt:S=>KEYS_T[S.ci]},{n:'LEAD',k:'li',max:9,txt:S=>LEAD_T[S.li]},{n:'PAD',k:'pad',max:2,txt:S=>S.pad?'ON':'OFF'},{n:'COLOR',k:'skin',max:5,txt:S=>SKINS[S.skin].n},
+ {n:'KEYS',k:'ci',max:8,txt:S=>KEYS_T[S.ci]},{n:'LEAD',k:'li',max:LEADS.length,txt:S=>LEAD_T[S.li]},{n:'PAD',k:'pad',max:2,txt:S=>S.pad?'ON':'OFF'},{n:'COLOR',k:'skin',max:SKINS.length,txt:S=>SKINS[S.skin].n},
  {n:'GROOVE',k:'groove',txt:S=>'DICE',fr:S=>0,ch:(S,d)=>{if(d>0)Groove.randomize();else Groove.undoGroove();}}];
 const GROOVE_BTN=[158,14,60,48];
 function setCh(s,i,c){return s.slice(0,i)+c+s.slice(i+1);}
 const Groove={name:'groove',
- make(S,slotId){this.undo=null;this.S=S;this.slot=slotId;this.r=1;this.c=0;this.kn=0;this.lp=0;this.pi=0;this.dirty=false;this.menu=null;this.playing=false;this.lastBass=2;this.lastLead=7;return this;},
+ make(S,slotId){this.undo=null;this.hist=[];this.redo=[];this.lastJ=null;this.naming=null;this.fileMenu=null;this.rec=null;this.S=S;this.slot=slotId;this.r=1;this.c=0;this.kn=0;this.lp=0;this.pi=0;this.dirty=false;this.menu=null;this.playing=false;this.lastBass=2;this.lastLead=7;return this;},
  enter(){unlockAudio();stopMusic();},resume(){},
  nbars(){return patBars(this.S,'ABC'[this.pi]).length;},
  pat(){const S=this.S;let P=S;if(this.pi>0){S.pats=S.pats||[null,null];if(!S.pats[this.pi-1])S.pats[this.pi-1]=makePat(S);P=S.pats[this.pi-1];}const n=16*this.nbars();if(P.lead.length<n)P.lead=P.lead+'.'.repeat(n-P.lead.length);return P;},
@@ -173,7 +173,7 @@ const Groove={name:'groove',
    else if(R.k==='p')DRUM[KITS[S.kit].p](t,1,g);
    else if(R.k==='bass'){const c=this.pat().bass[this.c];if(c==='.')return;const iv=BI[BASS_IV[+c]]!==undefined?BI[BASS_IV[+c]]:+BASS_IV[+c];BASSI[BASSES[S.bi]](t,28+((rootPc-4+12)%12)+iv,.3,1,g);}
    else if(R.k==='ch')COMPI[KEYSI[S.ci]](t,voice(rootPc,prog[1]),.45,.8,g);
-   else if(R.k==='lead'){const ch=this.pat().lead[this.lp*16+this.c];if(ch==='.')return;LEADI[LEADS[S.li]](t,leadMidi(S,ch.charCodeAt(0)-97),.3,1,g);}}catch(e){}},
+   else if(R.k==='lead'){const ch=this.pat().lead[this.lp*16+this.c];if(ch==='.')return;leadFn(S)(t,leadMidi(S,ch.charCodeAt(0)-97),.3,1,g);}}catch(e){}},
  knob(d){const K=GKNOBS[this.kn],S=this.S;if(K.ch)K.ch(S,d);else{S[K.k]=(S[K.k]+d+K.max)%K.max;if(K.k==='pr')delete S.bars;}SFX.move();this.refresh();},
  pitch(d){const R=GROWS[this.r-1];if(!R.notes){if(d>0)this.toggle();return;}const {s,i}=this.cellKey(),S=this.pat(),cur=S[s][i];
   let v;if(R.k==='bass'){v=cur==='.'?this.lastBass:Math.max(0,Math.min(7,+cur+d));this.lastBass=v;S[s]=setCh(S[s],i,String(v));}
@@ -186,14 +186,18 @@ const Groove={name:'groove',
   if(R.k==='bass')delete S.bass4;if(R.k==='ch')delete S.ch4;
   this.refresh();if(S[s][i]!=='.')this.preview();else SFX.move();},
  menuItems(){return [{n:'Keep jamming',go:()=>{this.menu=null;}},{n:'GROOVE! Random song',go:()=>this.randomize()}].concat(this.undo?[{n:'Undo groove',go:()=>this.undoGroove()}]:[],[{n:this.slot?'Save song':'Save as new song',go:()=>this.save()},
-  {n:'New random name',go:()=>{this.S.name=randSongName();this.dirty=true;toast('Name: '+this.S.name,'#2de2f5');}},
+  {n:'Save as a copy',go:()=>{this.slot=null;this.S=cloneSong(this.S);this.S.name=(this.S.name+' 2').slice(0,24);this.save();}},
+  {n:'Rename (type a name)',go:()=>{this.menu=null;this.naming=this.S.name;}},
+  {n:'Song file / song code',go:()=>{this.menu=null;this.fileMenu={sel:0};}},
+  {n:'Record to audio file',go:()=>{this.menu=null;grooveRecord(this);}},
   {n:'Clear this pattern',go:()=>{const P=this.pat();PAT_KEYS.forEach(k=>P[k]=k==='lead'?'.'.repeat(64):blank16);delete P.bass4;delete P.ch4;delete P.fill;if(this.pi>0)delete P.bars;this.refresh();this.menu=null;toast('Pattern '+'ABC'[this.pi]+' cleared','#2de2f5');}},
   {n:'Clear everything',go:()=>{this.pi=0;const n=this.S.name,sk=this.S.skin;this.S=blankSong();this.S.name=n;this.S.skin=sk;['k','s','h','bass'].forEach(k=>this.S[k]=k==='bass'?blank16:blank16);this.refresh();this.menu=null;toast('Clean slate!','#2de2f5');}},
   {n:!this.dirty?'Exit':this.menu&&this.menu.arm?'Really exit? Press again':'Exit without saving',go:()=>{if(this.dirty&&!this.menu.arm){this.menu.arm=true;this.menu.armSel=this.menu.sel;SFX.hurt();toast('Unsaved changes! Save first, or press Exit again.','#ff5a8a');return;}this.stop();pop();}}]);},
- save(){const S=this.S;if(this.slot){const i=SAVE.songs.findIndex(x=>x.id===this.slot);if(i>=0){S.id=this.slot;SAVE.songs[i]=cloneSong(S);}}
-  else{if(SAVE.songs.length>=8){toast('Song shelf full (8). Delete one in My Songs.','#ff5a8a');SFX.hurt();return;}S.id=Date.now().toString(36)+(Math.random()*1e4|0).toString(36);this.slot=S.id;SAVE.songs.push(cloneSong(S));}
+ save(){const S=this.S;if(this.slot){const i=SAVE.songs.findIndex(x=>x.id===this.slot);if(i>=0){S.id=this.slot;SAVE.songs[i]=cloneSong(S);}else this.slot=null;}
+  if(!this.slot){if(SAVE.songs.length>=SONG_MAX){toast('Song shelf full ('+SONG_MAX+'). Delete one in My Songs.','#ff5a8a');SFX.hurt();return;}S.id=Date.now().toString(36)+(Math.random()*1e4|0).toString(36);this.slot=S.id;SAVE.songs.push(cloneSong(S));}
   save();this.dirty=false;this.menu=null;SFX.ok();playStinger('unlock');toast('Saved: '+S.name);},
- update(){if(this.menu){const I=this.menuItems();navList(this.menu,I.length);if(this.menu.sel!==this.menu.armSel)this.menu.arm=false;if(anyPressed('ok')){SFX.ok();I[this.menu.sel].go();return;}if(backPressed()||MUI.esc){this.menu=null;SFX.move();}return;}
+ update(){grooveTrack(this);if(this.naming!=null||this.rec)return;if(this.fileMenu){grooveFileMenuUpdate(this);return;}
+  if(this.menu){const I=this.menuItems();navList(this.menu,I.length);if(this.menu.sel!==this.menu.armSel)this.menu.arm=false;if(anyPressed('ok')){SFX.ok();I[this.menu.sel].go();return;}if(backPressed()||MUI.esc){this.menu=null;SFX.move();}return;}
   if(backPressed()||MUI.esc){this.menu={sel:0};SFX.move();return;}
   if(anyPressed('start')){if(this.playing)this.stop();else this.play();SFX.move();return;}
   if(anyPressed('up')){this.r=(this.r+11)%12;SFX.move();}if(anyPressed('down')){this.r=(this.r+1)%12;SFX.move();}
@@ -218,24 +222,13 @@ const Groove={name:'groove',
  curLead(st){if(st<0)return -1;const sl=slotAt(this.S,Math.floor(st/16)),Pt=patOf(this.S,songArr(this.S)[sl.entry]),L16=16*sl.nb,sp=sl.barIn*16+st%16;for(let b=0;b<4;b++){const k=(sp-b+L16)%L16,c=Pt.lead[k]||'.';if(c!=='.')return leadMidi(this.S,c.charCodeAt(0)-97);}return -1;},
  draw(){const S=this.S,SK=SKINS[S.skin],st=this.step(),bar=st>=0?Math.floor(st/16):-1,col16=st>=0?st%16:-1;
   const arr=songArr(S),sl=bar>=0?slotAt(S,bar):null,entry=sl?sl.entry:-1,barIn=sl?sl.barIn:-1,PL=entry>=0?patOf(S,arr[entry]):S,V=this.pat(),same=PL===V,NB=this.nbars();
-  const thump=st>=0&&PL.k[col16]==='x'?1:0,now=AC?AC.currentTime:0,shake=now-GTR.hit>=0&&now-GTR.hit<.35?(1-(now-GTR.hit)/.35):0;
+  const thump=st>=0&&PL.k[col16]==='x'?1:0,now=AC?AC.currentTime:0,shake=0;
   roomBg();
   // desk
   ctx.fillStyle='#4a2a14';ctx.fillRect(0,438,W,42);ctx.fillStyle='#7a4a22';ctx.fillRect(0,434,W,8);
-  // ---- electric guitar on a stand ----
-  ctx.strokeStyle='#222';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(30,436);ctx.lineTo(54,380);ctx.lineTo(78,436);ctx.moveTo(54,380);ctx.lineTo(54,300);ctx.stroke();
-  rrect(45,120,18,190,4,'#8a5a2a','#000',2);for(let f=0;f<9;f++){ctx.fillStyle='#d8c08a';ctx.fillRect(45,140+f*19,18,2);}
-  rrect(42,100,24,26,6,'#e2343a','#000',2);for(const py of [106,114,122]){ctx.fillStyle='#ddd';ctx.fillRect(36,py-2,6,4);ctx.fillRect(66,py-2,6,4);}
-  ctx.fillStyle='#e2343a';ctx.strokeStyle='#000';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(54,338,30,30,0,0,7);ctx.ellipse(54,388,40,36,0,0,7);ctx.fill();ctx.stroke();
-  ctx.fillStyle='#e2343a';ctx.beginPath();ctx.ellipse(54,338,28,28,0,0,7);ctx.fill();
-  ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(40,378,16,22,.3,0,7);ctx.fill();
-  for(const py of [340,372]){rrect(42,py,24,9,2,'#222','#000',1);}rrect(44,398,20,6,2,'#bbb','#000',1);
-  ctx.strokeStyle='#eee';ctx.lineWidth=1;for(let k=0;k<4;k++){const x=48+k*4,w=shake*Math.sin(TIME*90+k)*2.2;ctx.beginPath();ctx.moveTo(x,112);ctx.quadraticCurveTo(x+w,260,x,401);ctx.stroke();}
-  if(shake>0){ctx.strokeStyle='rgba(255,210,58,'+shake+')';ctx.lineWidth=2;for(let k=0;k<3;k++){ctx.beginPath();ctx.arc(54,388,48+k*8,-1.2,-.4);ctx.stroke();}}
-  // ---- beat pad (pads flash with the drums) ----
-  rrect(6,8,140,92,10,'#26262e','#000',3);
-  const PADS=[['k','#ff5a5a'],['s','#ffb03a'],['c','#ffd23a'],['h','#7cf07c'],['O','#3ee0b0'],['p','#b98cff'],['bass','#ff6fb5'],['ch','#2de2f5']];
-  PADS.forEach(([k,c],i)=>{const x=14+(i%4)*32,y=16+Math.floor(i/4)*40,hit=col16>=0&&PL[k][col16]!=='.';rrect(x,y,28,34,6,hit?c:'#3a3a46','#000',1.5);if(hit){ctx.fillStyle='rgba(255,255,255,.35)';ctx.fillRect(x+4,y+4,20,6);}});
+  // ---- tool rail (v0.44: replaced the cartoon guitar) ----
+  grooveRail(this);
+  grooveViewTabs(this);
   // ---- FM-1 pocket synth: sound knobs, keys light up with the lead ----
   const FC=FMC[SK.fm];
   rrect(152,8,482,92,12,FC.body,'#000',3);rrect(156,12,474,84,9,null,FC.edge,1.5);
@@ -283,14 +276,17 @@ const Groove={name:'groove',
   text((this.pi?'[PATTERN '+'ABC'[this.pi]+'] ':'')+info,120,418,11,'#ffd23a','left',null);
   // speakers thump on the desk edge
   if(thump){ctx.fillStyle=SK.a;ctx.beginPath();ctx.arc(612,412,4,0,7);ctx.fill();}
-  if(!this.menu){grooveHits(this);MUI.chips(grooveChips(this),441,20);}
-  text(MUI.mouseRecent()?'Mouse: click a step to place/remove, drag a note up/down for pitch, click FM-1 keys to write lead notes, scroll or click knob sides':'Keyboard: Space place, G or / higher, F or . lower, Tab or Enter play, Esc or Q menu. Hold an arrow to move fast.',W/2,474,MUI.mouseRecent()?9:10,'#cfe','center',null);
-  if(this.menu){dim(.55);panel(190,110,260,296,SK.a);text('SONG MENU',320,140,20,'#ffd23a','center');
-   MUI.add(0,0,W,H,{hl:false,click:()=>{this.menu=null;SFX.move();}});MUI.add(190,110,260,296,{hl:false,click:()=>{}});
-   this.menuItems().forEach((it,i)=>{const y=156+i*40,s=i===this.menu.sel;rrect(206,y,228,34,9,s?'rgba(255,210,58,.95)':'rgba(30,60,90,.85)',s?'#fff':'#2de2f5',2);text(it.n,320,y+22,13,s?'#102':'#fff','center',null);
-    MUI.add(206,y,228,34,{hl:false,hover:()=>{if(this.menu&&this.menu.sel!==i){this.menu.sel=i;SFX.move();}},click:()=>{if(this.menu){this.menu.sel=i;MUI.btn('ok');}}});});}
+  if(!this.menu&&!this.fileMenu&&this.naming==null&&!this.rec){grooveHits(this);MUI.chips(grooveChips(this),441,20);}
+  text(MUI.mouseRecent()?'Mouse: click a step to place/remove, drag a note up/down for pitch, click FM-1 keys to write lead notes, scroll or click knob sides':'Keyboard: Space place, G or / higher, F or . lower, Enter play, Tab FM-1 view, Esc menu. Hold an arrow to move fast.',W/2,474,MUI.mouseRecent()?9:10,'#cfe','center',null);
+  grooveOverlays(this);
   drawToast();}};
 
+
+function grooveMenuDraw(G){const SK=SKINS[G.S.skin];dim(.55);const I=G.menuItems(),ph=I.length*31+52,py=Math.max(8,240-ph/2);panel(160,py,320,ph,SK.a);text('SONG MENU',320,py+30,20,'#ffd23a','center');
+   MUI.add(0,0,W,H,{hl:false,click:()=>{G.menu=null;SFX.move();}});MUI.add(160,py,320,ph,{hl:false,click:()=>{}});
+   I.forEach((it,i)=>{const y=py+44+i*31,s=i===G.menu.sel;rrect(176,y,288,27,8,s?'rgba(255,210,58,.95)':'rgba(30,60,90,.85)',s?'#fff':'#2de2f5',2);text(it.n,320,y+18,13,s?'#102':'#fff','center',null);
+    MUI.add(176,y,288,27,{hl:false,hover:()=>{if(G.menu&&G.menu.sel!==i){G.menu.sel=i;SFX.move();}},click:()=>{if(G.menu){G.menu.sel=i;MUI.btn('ok');}}});});}
+function grooveOverlays(G){if(G.menu)grooveMenuDraw(G);if(G.fileMenu)grooveFileMenuDraw(G);if(G.naming!=null)grooveNamingDraw(G);if(G.rec)grooveRecDraw(G);}
 
 // ---------- mouse / tap boxes for the Home Studio (v0.41). Same layout numbers as Groove.draw ----------
 function grooveKnobBox(G,k,x,y,w,h){const turn=d=>{G.r=0;G.kn=k;G.knob(d);};

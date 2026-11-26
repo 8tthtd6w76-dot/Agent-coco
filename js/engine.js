@@ -81,7 +81,7 @@ function frame(t){requestAnimationFrame(frame);const dt=Math.min(0.05,(t-last)/1
  drawMuteTag(dt);}  // achievement banner (achievements.js)
 // mute toggle
 // v0.40: N no longer mutes while you are typing a code (TESTING, MOONJUMP, TORNADO... have an N in them and used to switch all sound off).
-function typingText(e){const t=e&&e.target;return (typeof scene!=='undefined'&&scene&&scene.name==='code')||!!(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable));}
+function typingText(e){const t=e&&e.target;return (typeof scene!=='undefined'&&scene&&(scene.name==='code'||scene.name==='groove'&&scene.naming!=null))||!!(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable));}
 addEventListener('keydown',e=>{if(e.code==='KeyN'&&!e.repeat&&!typingText(e)){muted=!muted;MUTE_T=2.5;}});
 let MUTE_T=0;  // shows a MUTED / SOUND ON pill for a moment after N, and a small MUTED tag while muted
 function drawMuteTag(dt){if(MUTE_T>0)MUTE_T-=dt;if(!muted&&MUTE_T<=0)return;ctx.save();ctx.globalAlpha=MUTE_T>0?1:.75;
