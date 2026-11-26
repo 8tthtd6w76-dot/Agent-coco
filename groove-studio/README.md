@@ -10,7 +10,13 @@ A song-making studio for the Mac, separate from the Agent Coco game. Electron ap
 - Files: `.groovestudio` (song + audio in one file). Imports Agent Coco songs (`.cocosong.json` or `COCO1:` codes). Exports WAV.
 - Autosaves continuously and reopens the last song.
 
-## Run / build on the Mac
+## Install or update on the Mac
+```
+curl -sL https://raw.githubusercontent.com/8tthtd6w76-dot/Agent-coco/claude/project-thread-39i250/groove-studio/install.sh | bash
+```
+After the first time, double-click "Update Groove Studio" on the Desktop.
+
+## Run / build by hand
 ```
 npm install
 npm start                 # run without installing

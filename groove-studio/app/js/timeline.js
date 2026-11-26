@@ -147,7 +147,7 @@ function drawClip(cv,tr,c){const g=cv.getContext('2d'),dp=devicePixelRatio,W=cv.
   g.globalAlpha=.85;for(let x=0;x<W;x++){const b=x/UI.ppb,inl=b%c.plen,s0=Math.floor(((c.off||0)+inl*sp)*sr),s1=Math.floor(((c.off||0)+(inl+1/UI.ppb)*sp)*sr);let p=0;
    for(let i=s0;i<s1&&i<d.length;i+=Math.max(1,(s1-s0)>>4)){const v=Math.abs(d[c.rev?d.length-1-i:i]);if(v>p)p=v;}const h=Math.max(.5,Math.min(1,p*gain)*amp);g.fillRect(x,mid-h,1,h*2);}return;}
  if(tr.type==='drums'){const rows=16,rh=(H-14)/rows;g.globalAlpha=.9;
-  for(let k=0;k*c.plen<c.len;k++)for(const n of c.notes){const x=(k*c.plen+n.t)*UI.ppb;if(n.t>=c.plen||x>W)continue;g.globalAlpha=.4+.6*n.v;g.fillRect(x,12+(15-n.p)*rh,Math.max(2,UI.ppb/4-1),Math.max(1.5,rh-.5));}return;}
+  for(let k=0;k*c.plen<c.len;k++)for(const n of c.notes){const x=(k*c.plen+n.t)*UI.ppb;if(n.t>=c.plen||x>W)continue;g.globalAlpha=.4+.6*n.v;g.fillStyle=PAD_COLORS[n.p];g.fillRect(x,12+n.p*rh,Math.max(2,UI.ppb/4-1),Math.max(1.5,rh-.5));}return;}
  if(!c.notes.length)return;let lo=127,hi=0;c.notes.forEach(n=>{lo=Math.min(lo,n.m);hi=Math.max(hi,n.m);});lo-=2;hi+=2;const rh=(H-16)/Math.max(12,hi-lo);
  for(let k=0;k*c.plen<c.len;k++)for(const n of c.notes){if(n.t>=c.plen)continue;const x=(k*c.plen+n.t)*UI.ppb;if(x>W)continue;g.globalAlpha=.5+.5*n.v;g.fillRect(x,12+(hi-n.m)*rh,Math.max(2,n.d*UI.ppb-1),Math.max(2,rh));}}
 

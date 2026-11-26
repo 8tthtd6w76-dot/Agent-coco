@@ -39,6 +39,8 @@ function applyStrip(M,tr,audible){const s=stripFor(M,tr),t=M.a.currentTime,fx=tr
 function meterLevel(an){if(!an)return 0;const d=new Float32Array(an.fftSize);an.getFloatTimeDomainData(d);let p=0;for(let i=0;i<d.length;i++){const v=Math.abs(d[i]);if(v>p)p=v;}return p;}
 
 // ---------- drum kits: 16 synthesized pads per kit, rendered once to buffers ----------
+// one color per pad (drums warm, hats cool, toms green, percussion purple) so pads, step rows and clips match
+const PAD_COLORS=['#ff5d5d','#ffa94d','#ffd43b','#4dd4ff','#3bc9db','#f783ac','#51cf66','#8ce99a','#c0eb75','#da77f2','#74c0fc','#e599f7','#66d9e8','#ffc078','#9775fa','#ff8787'];
 const PAD_NAMES=['Kick','Snare','Clap','Closed Hat','Open Hat','Rim','Low Tom','Mid Tom','High Tom','Cowbell','Shaker','Conga','Crash','Snap','Blip','Kick 2'];
 const KITS_DEF=[
  {n:'Funk',k:{f:55,drop:120,dec:.38,click:.5},s:{tone:190,dec:.18,snap:.7},hat:{f:8000,dec:.05},tom:1,pitch:0},

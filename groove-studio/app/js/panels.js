@@ -36,7 +36,7 @@ function drumPanel(tr,body){const L=el('div','col');L.style.width='300px';L.styl
  const top=el('div','row');top.append(sel(KITS_DEF.map(k=>k.n+' kit'),tr.kit,v=>{commit();tr.kit=v;renderPanel();},'Drum kit'),
   btn(P.quant?'Q 1/16 on':'Q off',()=>{P.quant=!P.quant;renderPanel();},'Snap pads you play live to the 16th-note grid',P.quant?'on':''));
  L.append(top);const pads=el('div','pads');
- for(let r=3;r>=0;r--)for(let c=0;c<4;c++){const p=r*4+c,pd=tr.pads[p],b=el('div','pad'+(PANEL.pad===p?' sel':'')+(pd.sample?' smp':''));b.style.setProperty('--c',tr.color);b.dataset.p=p;
+ for(let r=3;r>=0;r--)for(let c=0;c<4;c++){const p=r*4+c,pd=tr.pads[p],b=el('div','pad'+(PANEL.pad===p?' sel':'')+(pd.sample?' smp':''));b.style.setProperty('--c',PAD_COLORS[p]);b.dataset.p=p;
   b.innerHTML=`<span>${esc(pd.name||PAD_NAMES[p])}</span><span class="k">${PAD_KEYS[p].toUpperCase()}</span>`;
   b.onmousedown=async e=>{await ensureAudio();PANEL.pad=p;livePad(tr,p,e.shiftKey?.5:1);flashPad(p);document.querySelectorAll('.pad.sel').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');padTools(tr,pt);};
   b.ondragover=e=>e.preventDefault();b.ondrop=e=>{e.preventDefault();e.stopPropagation();const f=e.dataTransfer.files[0];if(f)loadSampleToPad(tr,p,f);};
@@ -56,9 +56,9 @@ function drumPanel(tr,body){const L=el('div','col');L.style.width='300px';L.styl
  const find=(col,p)=>c.notes.findIndex(n=>n.p===p&&Math.abs(n.t*4-col)<.5);
  const draw=()=>{const g=cv.getContext('2d'),dp=devicePixelRatio;g.setTransform(dp,0,0,dp,0,0);g.fillStyle='#0f1116';g.fillRect(0,0,cv.width,cv.height);
   const ph=T.playing&&headNow()>=c.start&&headNow()<c.start+c.len?Math.floor(((headNow()-c.start)%c.plen)*4):-1;
-  for(let p=0;p<16;p++){const y=p*RH;g.fillStyle=p===PANEL.pad?'#2a3160':p%2?'#151820':'#12141a';g.fillRect(0,y,LBL,RH);g.fillStyle=p===PANEL.pad?'#fff':'#9aa1b3';g.font='10px -apple-system,sans-serif';g.fillText((tr.pads[p].name||PAD_NAMES[p]).slice(0,13),6,y+10);
+  for(let p=0;p<16;p++){const y=p*RH;g.fillStyle=p===PANEL.pad?'#2a3160':p%2?'#151820':'#12141a';g.fillRect(0,y,LBL,RH);g.fillStyle=PAD_COLORS[p];g.fillRect(0,y+1,4,RH-2);g.fillStyle=p===PANEL.pad?'#fff':'#9aa1b3';g.font='10px -apple-system,sans-serif';g.fillText((tr.pads[p].name||PAD_NAMES[p]).slice(0,13),9,y+10);
    for(let s=0;s<cols;s++){const x=LBL+s*CW;g.fillStyle=s===ph?'#2b3040':(Math.floor(s/4)%2?'#1a1d25':'#1e222c');g.fillRect(x+1,y+1,CW-2,RH-2);}}
-  g.fillStyle=tr.color;for(const n of c.notes){const s=Math.round(n.t*4);if(s>=cols)continue;g.globalAlpha=.35+.65*n.v;g.fillRect(LBL+s*CW+2,n.p*RH+2,CW-4,RH-4);}g.globalAlpha=1;
+  for(const n of c.notes){const s=Math.round(n.t*4);if(s>=cols)continue;g.fillStyle=PAD_COLORS[n.p];g.globalAlpha=.35+.65*n.v;g.fillRect(LBL+s*CW+2,n.p*RH+2,CW-4,RH-4);}g.globalAlpha=1;
   g.fillStyle='rgba(255,255,255,.18)';for(let s=0;s<=cols;s+=16)g.fillRect(LBL+s*CW-1,0,2,16*RH);};
  EDIT={draw};
  let paint=null;
