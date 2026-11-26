@@ -27,7 +27,7 @@ ipcMain.handle('open-file',async()=>{const r=await dialog.showOpenDialog(win,{de
   if(r.canceled||!r.filePaths[0])return null;return {path:r.filePaths[0],text:fs.readFileSync(r.filePaths[0],'utf8')};});
 ipcMain.handle('save-file',async(e,o)=>{let p=o.path;
   if(!p){const wav=o.kind==='wav';const r=await dialog.showSaveDialog(win,{defaultPath:path.join(songsDir(),o.name),
-      filters:[wav?{name:'WAV audio',extensions:['wav']}:{name:'Groove Studio song',extensions:['groovestudio']}]});if(r.canceled||!r.filePath)return null;p=r.filePath;}
+      filters:[wav?{name:'WAV audio',extensions:['wav']}:o.kind==='coco'?{name:'Agent Coco song',extensions:['json']}:{name:'Groove Studio song',extensions:['groovestudio']}]});if(r.canceled||!r.filePath)return null;p=r.filePath;}
   fs.writeFileSync(p,typeof o.data==='string'?o.data:Buffer.from(o.data));if(o.kind==='wav')shell.showItemInFolder(p);return p;});
 ipcMain.handle('confirm',async(e,msg)=>{const r=await dialog.showMessageBox(win,{type:'question',buttons:['Continue','Cancel'],defaultId:1,cancelId:1,message:msg});return r.response===0;});
 function openPath(p){try{win.webContents.send('open-path',{path:p,text:fs.readFileSync(p,'utf8')});}catch(e){}}
@@ -57,8 +57,8 @@ app.whenReady().then(()=>{
   protocol.handle('app',req=>{const u=new URL(req.url);let p=decodeURIComponent(u.pathname);if(p==='/'||!p)p='/index.html';
     const f=path.normalize(path.join(__dirname,'app',p));if(!f.startsWith(path.join(__dirname,'app')))return new Response('no',{status:403});
     return net.fetch(pathToFileURL(f).toString());});
-  session.defaultSession.setPermissionRequestHandler((wc,perm,cb)=>cb(['media','clipboard-read','clipboard-sanitized-write'].includes(perm)));
-  session.defaultSession.setPermissionCheckHandler((wc,perm)=>['media','clipboard-read','clipboard-sanitized-write'].includes(perm));
+  session.defaultSession.setPermissionRequestHandler((wc,perm,cb)=>cb(['media','midi','clipboard-read','clipboard-sanitized-write'].includes(perm)));
+  session.defaultSession.setPermissionCheckHandler((wc,perm)=>['media','midi','clipboard-read','clipboard-sanitized-write'].includes(perm));
   buildMenu();createWindow();});
 app.on('window-all-closed',()=>app.quit());
 app.on('before-quit',e=>{if(!quitting&&win){e.preventDefault();win.webContents.send('app-quit');}});

@@ -87,3 +87,56 @@ function importCocoSong(S){
  newProject();P.tracks=[dr,bs,ch,ld,newTrack('audio','Vocals')];P.tracks.forEach((t,i)=>t.color=COLORS[i%COLORS.length]);
  P.name=String(S.name||'Agent Coco Song').slice(0,40);P.bpm=S.bpm||100;P.swing=sw;P.key=key;P.scale=[1,2,0][S.sc|0]||0;P.sections=sections;P.loop={on:false,a:0,b:bar*4};
  HIST.u=[];HIST.r=[];return P;}
+
+// ---------- Agent Coco song export: 4 bars (the loop, or the start of the song) as a game song, so it plays in the Music Room
+// and in the phone Groove Studio. The lead keeps its FM-1 sound (game lead slot 9 = FM-1). ----------
+function cocoCode(S){return 'COCO1:'+btoa(unescape(encodeURIComponent(JSON.stringify(S))));}
+function exportCocoSong(){const A=P.loop.on&&P.loop.b>P.loop.a?P.loop.a:0,W=16;
+ const live=t=>!t.mute&&t.clips.length;
+ const hits=t=>{const out=[];t.clips.forEach(c=>c.notes.forEach(n=>{for(let s=c.start+n.t;s<c.start+c.len;s+=c.plen)if(s>=A&&s<A+W)out.push(Object.assign({},n,{b:s-A}));}));return out.sort((x,y)=>x.b-y.b);};
+ const S={name:String(P.name||'Groove Studio Jam').slice(0,24),bpm:Math.max(60,Math.min(200,Math.round(P.bpm))),sw:0,key:((P.key%12)+12)%12,sc:2,pr:0,kit:0,bi:4,ci:0,li:9,pad:0,skin:0,lo:0,lh:4};
+ S.sw=[0,.08,.15,.22].reduce((bi,v,i,a)=>Math.abs(v-P.swing)<Math.abs(a[bi]-P.swing)?i:bi,0);
+ S.sc=({0:2,1:0,2:1,3:2,4:0,5:2,6:0})[P.scale];if(S.sc==null)S.sc=0;
+ const gsc=G_SCALES[S.sc];
+ // drums: the busiest bar of all drum tracks, as the game's one-bar lanes
+ const drs=P.tracks.filter(t=>t.type==='drums'&&live(t)),dh=[].concat(...drs.map(hits));
+ const dr=drs[0];if(dr){const gi=G_KIT.indexOf(dr.kit|0);S.kit=gi<0?0:gi;}
+ const perBar=[0,1,2,3].map(b=>dh.filter(n=>Math.floor(n.b/4)===b).length),bb=perBar.indexOf(Math.max(...perBar));
+ const lane={k:[],s:[],c:[],h:[],O:[],p:[]};for(const k in lane)lane[k]='.'.repeat(16).split('');
+ const LP={0:'k',1:'s',2:'c',3:'h',4:'O',5:'s',6:'k',12:'s',13:'c',15:'k'};
+ dh.filter(n=>Math.floor(n.b/4)===bb).forEach(n=>{const i=Math.round((n.b-bb*4)*4);if(i<0||i>15)return;const L=LP[n.p]||'p';lane[L][i]=n.v<.5&&L!=='O'?'g':'x';});
+ for(const k in lane)S[k]=lane[k].join('');
+ // which synth track is the bass, the chords and the lead
+ const sy=P.tracks.filter(t=>t.type==='synth'&&live(t)).map(t=>{const h=hits(t);const avg=h.length?h.reduce((a,n)=>a+n.m,0)/h.length:0;
+  const poly=h.length?h.length/new Set(h.map(n=>n.b.toFixed(2))).size:0;return {t,h,avg,poly};}).filter(x=>x.h.length);
+ const bass=sy.filter(x=>x.avg<52).sort((a,b)=>a.avg-b.avg)[0]||null;
+ const chords=sy.filter(x=>x!==bass&&x.poly>=2.2).sort((a,b)=>b.poly-a.poly)[0]||null;
+ const lead=sy.filter(x=>x!==bass&&x!==chords).sort((a,b)=>b.h.length-a.h.length)[0]||null;
+ // per-bar chords: root from the bass (or the chord's lowest note), quality from the notes that ring
+ const QS=['m7','M','m','7','maj7','m9','9','maj9','sus','m7b5','dim7','aug'],dflt=S.sc===2?'maj7':'m7';
+ const bars=[0,1,2,3].map(b=>{const inBar=x=>x?x.h.filter(n=>n.b>=b*4&&n.b<b*4+4):[];const cn=inBar(chords),bn=inBar(bass);
+  let root=bn.length?bn[0].m%12:cn.length?Math.min(...cn.map(n=>n.m))%12:null;if(root==null)return [0,dflt];
+  const pcs=new Set(cn.concat(bn).map(n=>(n.m-root+120)%12));let best=dflt,bs=-9;
+  QS.forEach(q=>{const iv=new Set(G_QUAL[q].map(v=>v%12));let s=0;pcs.forEach(p=>s+=iv.has(p)?1:-.6);iv.forEach(p=>{if(!pcs.has(p))s-=.25;});if(s>bs){bs=s;best=q;}});
+  if(!cn.length)best=(gsc.includes((root-S.key+15)%12)&&!gsc.includes((root-S.key+16)%12))?'m7':dflt;
+  return [((root-S.key)%12+12)%12,best];});
+ S.bars=bars;
+ // bass: intervals over each bar's root, one 16-step string per bar
+ const BIV=[['0',-5],['1',-3],['2',0],['3',2],['m',3],['M',4],['4',5],['5',7],['6',10],['7',12]];
+ S.bass4=bars.map(([o],b)=>{const r=(36+S.key+o)%12+36,str='.'.repeat(16).split('');(bass?bass.h:[]).filter(n=>n.b>=b*4&&n.b<b*4+4).forEach(n=>{const i=Math.round((n.b-b*4)*4);if(i>15)return;
+   const rel=n.m-r;let bc='2',bd=99;BIV.forEach(([c,v])=>{const d=Math.min(...[-24,-12,0,12,24].map(k=>Math.abs(v-(rel+k))))*10+Math.abs(v-rel)/100;if(d<bd){bd=d;bc=c;}});str[i]=bc;});return str.join('');});
+ if(S.bass4.every(s=>s===S.bass4[0])){S.bass=S.bass4[0];delete S.bass4;}else S.bass=S.bass4[0];
+ if(!/[^.]/.test(S.bass))S.bass='2.....2...2.....';
+ // chord rhythm
+ S.ch4=[0,1,2,3].map(b=>{const str='.'.repeat(16).split('');(chords?chords.h:[]).filter(n=>n.b>=b*4&&n.b<b*4+4).forEach(n=>{const i=Math.round((n.b-b*4)*4);if(i<=15)str[i]=n.v>.92?'X':n.v<.45?'g':'x';});return str.join('');});
+ if(S.ch4.every(s=>s===S.ch4[0])){S.ch=S.ch4[0];delete S.ch4;}else S.ch=S.ch4[0];
+ if(chords){const p=chords.t.patch.p|0;S.ci=p===5?2:p===9?5:0;}
+ // lead: scale degrees a..z over 64 steps, in the FM-1 sound of that track
+ const lst='.'.repeat(64).split('');
+ if(lead){const base=60+S.key-(S.key>=7?12:0),lm=d=>base+gsc[d%7]+12*Math.floor(d/7);
+  const avg=lead.avg;S.lo=Math.max(-2,Math.min(1,Math.round((avg-(base+7))/12)));const off=12*S.lo;
+  const durs=[];lead.h.forEach(n=>{const i=Math.round(n.b*4);if(i>63)return;let bd=0,be=99;for(let d=0;d<26;d++){const e=Math.abs(lm(d)+off-n.m);if(e<be){be=e;bd=d;}}
+   const prev=lst[i];if(prev==='.'||bd>prev.charCodeAt(0)-97)lst[i]=String.fromCharCode(97+bd);durs.push(n.d||.25);});
+  durs.sort((a,b)=>a-b);S.lh=Math.max(1,Math.min(16,Math.round((durs[durs.length>>1]||1)*4)));S.fm=JSON.parse(JSON.stringify(lead.t.patch));}
+ else S.fm=fm1Patch(0);
+ S.lead=lst.join('');return S;}

@@ -214,3 +214,46 @@ canvas.wave{width:100%;height:120px;background:#0f1116;border-radius:8px;border:
 .qrec{width:170px;height:120px;border-radius:20px;font-size:18px;font-weight:800;background:#3a1420;border:2px solid var(--rec);color:#ffd1d6;flex:none}
 .qrec.on{background:var(--rec);color:#fff;animation:pulse 1s infinite}
 .qvinfo{display:flex;flex-direction:column;gap:8px;max-width:520px}
+/* ---- Jam v2: drum kit + mini keyboard + Smart Guide ---- */
+.pb.quick{flex-direction:column;position:relative}
+.qbody{display:flex;flex:1;min-height:0}
+.qhead{margin-left:auto;display:flex;gap:6px;align-items:center;flex:none}
+.qhead button{white-space:nowrap}
+.qguideb.on{background:#16384a;border-color:#4dd4ff;color:#d5f6ff}
+.qmidib.on{background:#2a2350;border-color:#9775fa;color:#e5dcff}
+.qhelpb{width:28px;padding:4px 0;font-weight:800}.qhelpb.on{background:#2a3160;border-color:var(--acc)}
+.qdcol{width:300px;flex:none}.qrcol{width:236px;flex:none}.qmcol{flex:1;min-width:0}
+.qdrums{grid-template-columns:repeat(5,1fr);gap:5px}
+.qpad{position:relative;padding:7px 2px 6px;font-size:11px}
+.qpad kbd,.qpiano kbd,.qhelp kbd{font:600 10px ui-monospace,Menlo,monospace;background:#0d0f13;border:1px solid #3a3f4b;border-bottom-width:2px;border-radius:4px;padding:0 4px;color:#cfd3dc}
+.qpad kbd{position:absolute;top:3px;right:3px}
+.qsounds{display:flex;flex-wrap:wrap;gap:5px}
+.qchip{flex-direction:row;gap:5px;padding:5px 9px;border-bottom-width:3px;font-size:12px}
+.qchip .em{font-size:16px}
+.qpiano{display:flex;position:relative;height:118px;flex:none;user-select:none;touch-action:none}
+.qpiano .pw{flex:1;position:relative;margin:0 1px;border-radius:0 0 8px 8px;background:#cfd3dc;color:#3a3f4b;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;padding-bottom:6px;cursor:pointer;border:1px solid #11131a}
+.qpiano .pw.ink{background:color-mix(in srgb,var(--c) 30%,#f4f5f8);color:#111}
+.qpiano .pw.out{background:#80858f;color:#2a2d33}
+.qpiano .pw.root{box-shadow:inset 0 -5px 0 var(--c)}
+.qpiano .pw .nn{font-weight:700;font-size:12px}
+.qpiano .pbk{position:absolute;top:0;right:-31%;width:58%;height:60%;z-index:2;border-radius:0 0 6px 6px;background:#1b1e25;border:1px solid #000;display:flex;align-items:flex-end;justify-content:center;padding-bottom:5px;cursor:pointer}
+.qpiano .pbk.ink{background:color-mix(in srgb,var(--c) 55%,#1b1e25)}
+.qpiano .pbk.out{background:#2b2e35}
+.qpiano .down{filter:brightness(.75)}
+.qpiano .heard::before{content:'';position:absolute;top:6px;left:50%;width:9px;height:9px;margin-left:-4.5px;border-radius:50%;background:#4dd4ff;box-shadow:0 0 8px #4dd4ff}
+.qkrow{flex-wrap:wrap}
+.qfm{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;padding:6px 8px;border:1px solid var(--line);border-radius:10px;background:#15181f}
+.qfm .fmtag{font:800 11px/1 ui-monospace,Menlo,monospace;letter-spacing:.1em;color:#111;background:#ffd23a;border-radius:4px;padding:3px 5px;align-self:center}
+.qfm select{max-width:130px}
+.qfm .knob.qknob{width:84px}
+.qhelp{position:absolute;right:14px;top:8px;width:min(460px,60%);max-height:calc(100% - 16px);overflow:auto;z-index:5;background:#1b2040;border:1px solid var(--acc);border-radius:12px;padding:10px 14px 10px;box-shadow:0 10px 30px rgba(0,0,0,.5);font-size:12.5px}
+.qhelp h4{margin:0 0 4px;font-size:13px}.qhelp ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+.qhelp .x{position:absolute;top:6px;right:6px;border:0;background:transparent;color:var(--dim)}
+.qguide{display:flex;align-items:center;gap:10px;padding:6px 12px;background:#0f2430;border-bottom:1px solid #1f4a5e;flex:none}
+.qguide .gear{font-size:18px}
+.qguide .gvu{width:60px;height:6px;border-radius:3px;background:#0a1419;overflow:hidden}.qguide .gvu i{display:block;height:100%;width:0;background:#4dd4ff}
+.qguide .gpulse{width:12px;height:12px;border-radius:50%;background:#4dd4ff;box-shadow:0 0 10px #4dd4ff;opacity:.15;transition:opacity .05s}
+.qguide .gval{display:flex;flex-direction:column;line-height:1.1;min-width:84px}.qguide .gval small{font-size:9px;color:#8fb6c6;text-transform:uppercase;letter-spacing:.08em}
+.qguide .gval b{font-size:14px;color:#9ab}.qguide .gval.sure b{color:#d5f6ff}
+.qguide .gbtn{background:#16384a;border-color:#4dd4ff;color:#d5f6ff;white-space:nowrap}
+.qguide .gtip{font-size:12.5px;color:#dff6ff;flex:1;min-width:0}
