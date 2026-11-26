@@ -1,0 +1,33 @@
+{
+  "name": "groove-studio",
+  "productName": "Groove Studio",
+  "version": "0.1.0",
+  "description": "Song making studio: voice looping, beat pads, FM-1 synth and arranging",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --mac dir"
+  },
+  "devDependencies": {
+    "electron": "33.2.1",
+    "electron-builder": "25.1.8"
+  },
+  "build": {
+    "appId": "com.michael.groovestudio",
+    "productName": "Groove Studio",
+    "files": ["main.js", "preload.js", "app/**/*"],
+    "directories": { "output": "dist", "buildResources": "build" },
+    "mac": {
+      "category": "public.app-category.music",
+      "icon": "build/icon.png",
+      "target": ["dir"],
+      "identity": null,
+      "hardenedRuntime": false,
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Groove Studio records your voice and instruments.",
+        "CFBundleDocumentTypes": [{ "CFBundleTypeName": "Groove Studio Song", "CFBundleTypeExtensions": ["groovestudio"], "CFBundleTypeRole": "Editor" }]
+      }
+    }
+  }
+}

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Groove Studio</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header id="top">
+  <div class="brand"><span class="logo"></span><input id="songName" spellcheck="false" title="Song name"></div>
+  <div class="transport">
+    <button id="bStart" class="ico" title="Back to start (Enter)">⏮</button>
+    <button id="bPlay" class="ico big" title="Play / Stop (Space)">▶</button>
+    <button id="bRec" class="ico big rec" title="Record (Cmd+R)">●</button>
+    <div id="pos" class="lcd" title="Bar . beat">1.1</div>
+    <label class="lcd bpm" title="Tempo: drag up/down or type">
+      <input id="bpm" type="number" min="40" max="240" value="100"><span>BPM</span></label>
+    <select id="keySel" title="Song key"></select>
+    <select id="scaleSel" title="Scale"></select>
+  </div>
+  <div class="toggles">
+    <button id="tLoop" class="tog" title="Loop (Cmd+L). Drag in the ruler to set the loop.">⟲ Loop</button>
+    <button id="tMetro" class="tog" title="Metronome (Cmd+K)">♩ Click</button>
+    <button id="tCount" class="tog" title="One bar count-in before recording">1-2-3-4</button>
+    <select id="snapSel" title="Snap clips to"><option value="4">Snap: bar</option><option value="1">Snap: beat</option><option value="0.25">Snap: 1/16</option><option value="0">Snap: off</option></select>
+    <label class="swing" title="Swing: delays every other 16th note">Swing <input id="swing" type="range" min="0" max="0.6" step="0.01"></label>
+  </div>
+  <div class="right">
+    <button id="bUndo" class="ico" title="Undo (Cmd+Z)">↶</button>
+    <button id="bRedo" class="ico" title="Redo (Shift+Cmd+Z)">↷</button>
+    <button id="bFile" class="menu" title="Files, import and export">File ▾</button>
+    <canvas id="master" width="14" height="36" title="Master level"></canvas>
+  </div>
+</header>
+
+<main id="arr">
+  <div id="heads">
+    <div class="corner"><span>Sections</span><span class="zoom"><button id="zOut" title="Zoom out">−</button><button id="zIn" title="Zoom in">+</button></span></div>
+    <div id="headList"></div>
+    <div class="addrow">
+      <button data-add="audio" title="A track for your voice or any mic">＋ Voice</button>
+      <button data-add="drums" title="Beat pads and step sequencer">＋ Beat</button>
+      <button data-add="synth" title="FM-1 synth with a piano roll">＋ Synth</button>
+    </div>
+  </div>
+  <div id="lanesWrap">
+    <div id="lanesInner">
+      <div id="secRow"></div>
+      <div id="ruler"></div>
+      <div id="lanes"></div>
+      <div id="loopShade"></div>
+      <div id="playhead"></div>
+    </div>
+  </div>
+</main>
+
+<div id="split" title="Drag to resize"></div>
+<section id="panel"></section>
+
+<div id="toast"></div>
+<div id="ctx" class="ctxmenu"></div>
+<div id="drop">Drop audio to import</div>
+
+<script src="js/audio.js"></script>
+<script src="js/fm1_engine.js"></script>
+<script src="js/project.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/timeline.js"></script>
+<script src="js/panels.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
