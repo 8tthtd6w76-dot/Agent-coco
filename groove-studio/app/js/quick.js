@@ -43,7 +43,7 @@ async function qPlay(){if(T.playing){stop();syncTop();renderPanel();return;}qEns
 // a tap: hear it now, and (while playing) write it into the loop, snapped to the nearest 16th
 function qTap(m,vel=1){const q=qInst();ensureAudio().then(()=>{const tr=qTrack(q,true);if(!tr)return;
   if(q.kind==='pad')livePad(tr,q.p,vel);else liveKeyDown(tr,m,.9*vel);
-  if(!T.playing)return;
+  if(!T.playing){qFreeTap(m,vel);return;}
   if(!QK.armedSnap){QK.armedSnap=JSON.stringify(P);}
   const late=((AC.outputLatency||0)+(AC.baseLatency||0))*P.bpm/60;let b=headNow()-late;
   if(loopOn()&&b<P.loop.a)b+=P.loop.b-P.loop.a;const g=QK.snap;b=Math.round(b*g)/g;if(loopOn()&&b>=P.loop.b)b=P.loop.a;
@@ -53,7 +53,7 @@ function qTap(m,vel=1){const q=qInst();ensureAudio().then(()=>{const tr=qTrack(q
   if(q.kind==='pad'){if(!c.notes.some(n=>n.p===q.p))QK.needPanel=true;if(!c.notes.some(n=>n.p===q.p&&Math.abs(n.t-t)<.01))c.notes.push({t,p:q.p,v:vel});}
   else{if(!c.notes.length)QK.needPanel=true;const n={t,d:.5,m,v:.85};c.notes=c.notes.filter(x=>!(x.m===m&&Math.abs(x.t-t)<.01));c.notes.push(n);QK.held[m]={n,b:headNow(),tr};}
   c.notes.sort((x,y)=>x.t-y.t);DIRTY=true;QK.dirtyDraw=true;});}
-function qRelease(m){const q=qInst(),tr=qTrack(q,false);if(tr)liveKeyUp(tr,m);const H=QK.held[m];delete QK.held[m];
+function qRelease(m){const q=qInst(),tr=qTrack(q,false);if(tr)liveKeyUp(tr,m);if(QK.free){const tp=[...QK.free.taps].reverse().find(x=>x.m===m&&x.up==null);if(tp)tp.up=performance.now()/1000;}const H=QK.held[m];delete QK.held[m];
  if(H&&T.playing){let d=headNow()-H.b;if(d<0)d+=P.loop.b-P.loop.a;H.n.d=Math.max(1/QK.snap,Math.round(d*QK.snap)/QK.snap);}}
 // a layer = everything tapped since you picked the instrument; it is saved for "Undo last layer"
 function qFinishLayer(){if(QK.armedSnap){HIST.u.push(QK.armedSnap);HIST.r=[];QK.layers.push({snap:QK.armedSnap,name:qInst().n});QK.armedSnap=null;}}
@@ -66,7 +66,7 @@ function qTapTempo(){const now=performance.now();QK.tapT=QK.tapT.filter(t=>now-t
  if(n>=4){const iv=(QK.tapT[n-1]-QK.tapT[0])/(n-1),bpm=Math.round(60000/iv);if(bpm>=50&&bpm<=200){setBpm(bpm);toast('Tempo: '+bpm+' BPM');}}else toast('Keep tapping… '+(4-n)+' more');}
 
 function quickPanel(Pn){const q=qInst(),col=qColor(q);
- const h=el('div','ph');h.appendChild(panelTabs());h.appendChild(el('span','hint',T.playing?'Tap along! Each tap snaps to the beat and joins the loop.':'1. Pick a sound  2. Press Play  3. Tap a rhythm'));Pn.appendChild(h);
+ const h=el('div','ph');h.appendChild(panelTabs());const st=el('span','hint qstatus',T.playing?'Play along! Every hit snaps to the beat and joins the loop.':'Just play! Pick a sound and tap a rhythm. Stop for 2 seconds and it becomes a loop.');st.id='qstatus';h.appendChild(st);Pn.appendChild(h);
  const body=el('div','pb quick');Pn.appendChild(body);
  // sounds
  const L=el('div','col');L.style.width='420px';L.style.flex='none';L.append(el('h4','','1 · Pick a sound'));
@@ -76,7 +76,7 @@ function quickPanel(Pn){const q=qInst(),col=qColor(q);
  // play + tap
  const M=el('div','col');M.style.flex='1';
  const top=el('div','row');const pb=el('button','qplay'+(T.playing?' on':''),T.playing?'■ Stop':'▶ Play');pb.onclick=qPlay;
- top.append(el('h4','','2 · Play'),pb,el('span','hint',P.loop.on?`Looping bars ${P.loop.a/4+1}–${P.loop.b/4}`:'Plays a 2–4 bar loop'));M.append(top);
+ top.append(el('h4','','2 · Play'),pb,el('span','hint',T.playing?'':'(optional: or just start playing below)'),el('span','hint',P.loop.on?`Looping bars ${P.loop.a/4+1}–${P.loop.b/4}`:'Plays a 2–4 bar loop'));M.append(top);
  const sn=el('div','row');sn.append(el('h4','',`3 · Tap ${q.n}`),el('span','hint','Snap taps to:'));const sg=el('div','qsnap');
  [[4,'Tight (1/16)'],[2,'Normal (1/8)'],[1,'Simple (beats)']].forEach(([v,n])=>{const b=btn(n,()=>{QK.snap=v;renderPanel();},'',QK.snap===v?'on':'');sg.appendChild(b);});sn.append(sg);M.append(sn);
  if(q.kind==='pad'){const t=el('button','qtap',`<span class="em">${q.e}</span><b>TAP</b><span class="hint">click, or press any letter key</span>`);t.style.setProperty('--c',col);
@@ -95,7 +95,7 @@ function quickPanel(Pn){const q=qInst(),col=qColor(q);
  R.append(el('h4','','Tempo'),el('div','row',`<span class="hint">${P.bpm} BPM</span>`));const tt=btn('Tap tempo',qTapTempo,'Tap 4 or more times at the speed you want');R.append(tt);
  body.appendChild(R);}
 function panelTabs(){const w=el('div','tabs');
- [['track','Track tools'],['quick','⚡ Quick Loop']].forEach(([k,n])=>{const b=el('button',PANEL.tab===k?'on':'',n);b.onclick=()=>{if(k!=='quick')qFinishLayer();PANEL.tab=k;renderPanel();};w.appendChild(b);});return w;}
+ [['track','Track tools'],['quick','⚡ Jam (easy)']].forEach(([k,n])=>{const b=el('button',PANEL.tab===k?'on':'',n);b.onclick=()=>{if(k!=='quick')qFinishLayer();PANEL.tab=k;renderPanel();};w.appendChild(b);});return w;}
 // keyboard while Quick Loop is open: letters tap the drum, A–K play the 8 scale keys
 addEventListener('keydown',e=>{if(PANEL.tab!=='quick'||e.metaKey||e.ctrlKey||e.altKey||e.repeat)return;if(e.target.closest&&e.target.closest('input[type=text],input[type=number],#songName'))return;
  const k=e.key.toLowerCase();if(k.length!==1||!/[a-z0-9]/.test(k))return;const q=qInst();e.stopImmediatePropagation();e.preventDefault();
@@ -108,3 +108,40 @@ function quickTick(){if(!QK.dirtyDraw&&!QK.needPanel)return;const now=performanc
 function qRepeatAll(){qFinishLayer();const end=Math.max(songEnd(),P.loop.b);let n=0;commit();
  P.tracks.filter(t=>t.quick).forEach(t=>t.clips.forEach(c=>{if(!c.notes.length)return;const st=c.start-Math.floor(c.start/c.plen)*c.plen;c.start=st;c.len=Math.max(c.plen,end-st);n++;}));
  renderTimeline();toast(n?'Your Quick layers now play through the whole song':'Tap something first');}
+
+// ---------- Free play: nothing is playing, you just play. Stop for 2 seconds and it works out your tempo,
+// snaps what you played to the beat, turns it into a loop and starts playing it, so you can add the next layer. ----------
+function qStatus(t){const e=document.getElementById('qstatus');if(e)e.textContent=t;}
+function qFreeTap(m,vel){const now=performance.now()/1000;if(!QK.free)QK.free={taps:[],inst:QK.inst};
+ if(QK.free.inst!==QK.inst){QK.free={taps:[],inst:QK.inst};}
+ QK.free.taps.push({t:now,m,v:vel,up:null});clearTimeout(QK.free.timer);
+ const n=QK.free.taps.length;qStatus(n<3?`Listening… keep playing (${n})`:`Listening… ${n} hits. Stop for 2 seconds when you're done.`);
+ QK.free.timer=setTimeout(qFreeFinish,2000);}
+function qFreeFinish(){const F=QK.free;QK.free=null;if(!F)return;const taps=F.taps;
+ if(taps.length<3){qStatus('Play at least 3 hits, then stop for 2 seconds.');return;}
+ const q=QUICK_INST.find(x=>x.id===F.inst)||qInst(),t0=taps[0].t;
+ // the beat: the typical gap between hits, folded into 70-150 BPM
+ const gaps=[];for(let i=1;i<taps.length;i++){const g=taps[i].t-taps[i-1].t;if(g>.08)gaps.push(g);}gaps.sort((a,b)=>a-b);
+ let beat=gaps.length?gaps[Math.floor(gaps.length/2)]:.5;while(beat<.4)beat*=2;while(beat>.86)beat/=2;
+ const empty=!P.tracks.some(t=>t.clips.some(c=>t.type==='audio'?c.src:c.notes.length));
+ let bpm=Math.round(60/beat);
+ if(empty){setBpm(bpm,false);}else{beat=60/P.bpm;bpm=P.bpm;}   // a song already playing keeps its tempo: your take is fitted to it
+ const snap=QK.snap||2,pos=taps.map(x=>Math.round((x.t-t0)/beat*snap)/snap);
+ const lenB=pos[pos.length-1]+1,bars=lenB<=4?1:lenB<=8?2:lenB<=16?4:8,L=bars*4;
+ commit();QK.layers.push({snap:HIST.u[HIST.u.length-1],name:q.n});
+ if(empty||!P.loop.on){P.loop={on:true,a:empty?0:Math.floor(T.head/4)*4,b:(empty?0:Math.floor(T.head/4)*4)+L};}
+ const la=P.loop.a,ll=P.loop.b-P.loop.a;const tr=qTrack(q,true);
+ let c=tr.clips.find(c=>la>=c.start&&la<c.start+c.len);if(!c){c=newClip(tr.type,la,ll,Math.min(ll,Math.max(L,4)));c.name='Jam';tr.clips.push(c);}
+ taps.forEach((x,i)=>{const t=((pos[i]+(la-c.start))%c.plen+c.plen)%c.plen;
+  if(q.kind==='pad'){if(!c.notes.some(n=>n.p===q.p&&Math.abs(n.t-t)<.01))c.notes.push({t,p:q.p,v:x.v});}
+  else{const d=x.up?Math.max(1/snap,Math.round((x.up-x.t)/beat*snap)/snap):.5;c.notes.push({t,d:Math.min(d,c.plen-t),m:x.m,v:.85});}});
+ c.notes.sort((a,b)=>a.t-b.t);updateMix();renderTimeline();syncTop();
+ toast(empty?`Got it! ${bpm} BPM, ${bars} bar loop. Now pick another sound and play along.`:`Added your ${q.n} to the loop. Pick another sound and play along!`);
+ play(P.loop.a).then(()=>{syncTop();renderPanel();});}
+
+function openJam(){PANEL.tab='quick';renderPanel();const b=document.getElementById('bJam');if(b)b.classList.add('on');}
+(function initJam(){const b=document.getElementById('bJam');if(b)b.onclick=()=>{if(PANEL.tab==='quick'){qFinishLayer();PANEL.tab='track';b.classList.remove('on');renderPanel();}else openJam();};
+ let seen=false;try{seen=!!localStorage.getItem('gs-welcomed');}catch(e){}
+ const W=document.getElementById('welcome');const done=go=>{W.classList.remove('show');try{localStorage.setItem('gs-welcomed','1');}catch(e){}if(go){ensureAudio();openJam();}};
+ document.getElementById('wGo').onclick=()=>done(true);document.getElementById('wSkip').onclick=()=>done(false);
+ if(!seen){W.classList.add('show');}})();
