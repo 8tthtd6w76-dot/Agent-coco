@@ -38,7 +38,7 @@ function drumPanel(tr,body){const L=el('div','col');L.style.width='300px';L.styl
   btn(P.quant?'Q 1/16 on':'Q off',()=>{P.quant=!P.quant;renderPanel();},'Snap pads you play live to the 16th-note grid',P.quant?'on':''));
  L.append(top);const pads=el('div','pads');
  for(let r=3;r>=0;r--)for(let c=0;c<4;c++){const p=r*4+c,pd=tr.pads[p],b=el('div','pad'+(PANEL.pad===p?' sel':'')+(pd.sample?' smp':''));b.style.setProperty('--c',PAD_COLORS[p]);b.dataset.p=p;
-  b.innerHTML=`<span>${esc(pd.name||PAD_NAMES[p])}</span><span class="k">${PAD_KEYS[p].toUpperCase()}</span>`;
+  b.innerHTML=`<span>${PAD_EMOJI[p]} ${esc(pd.name||PAD_NAMES[p])}</span><span class="k">${PAD_KEYS[p].toUpperCase()}</span>`;
   b.onmousedown=async e=>{await ensureAudio();PANEL.pad=p;livePad(tr,p,e.shiftKey?.5:1);flashPad(p);document.querySelectorAll('.pad.sel').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');padTools(tr,pt);};
   b.ondragover=e=>e.preventDefault();b.ondrop=e=>{e.preventDefault();e.stopPropagation();const f=e.dataTransfer.files[0];if(f)loadSampleToPad(tr,p,f);};
   pads.appendChild(b);}
@@ -50,24 +50,34 @@ function drumPanel(tr,body){const L=el('div','col');L.style.width='300px';L.styl
    c.plen=nl;if(c.len<nl)c.len=nl;renderTimeline();renderPanel();},'Pattern length'),
   btn('🎲 Vary',()=>{commit();varyBeat(c);renderTimeline();drawEdit();},'Adds ghost notes, hat rolls and kick pushes: a fresh take on the same groove'),
   btn('Clear',()=>{commit();c.notes=[];renderTimeline();drawEdit();}),
-  el('span','hint','Click or drag to paint · Shift = soft hit · right-click = erase'));
+  el('span','hint','Click or drag to paint · Shift = soft hit · right-click = erase · double-click a name to resize its row'),
+  btn('Rows: all big',()=>{const all=tr.pads.every(x=>x.h==='full');tr.pads.forEach(x=>x.h=all?'thin':'full');DIRTY=true;renderPanel();},'Switch every row between thin bars and full squares'));
  R.append(tools);const wrap=el('div','gridwrap'),cv=el('canvas','ed');wrap.appendChild(cv);R.appendChild(wrap);body.appendChild(R);
- const LBL=86,RH=14,cols=Math.round(c.plen*4);let CW=18;
- const size=()=>{CW=Math.max(16,Math.floor((wrap.clientWidth-LBL-2)/cols));cv.width=(LBL+cols*CW)*devicePixelRatio;cv.height=16*RH*devicePixelRatio;cv.style.width=LBL+cols*CW+'px';cv.style.height=16*RH+'px';draw();};
+ // each row's height is its own: thin bar, 3/4 or a full square (double-click the name to switch); stored per pad
+ const LBL=110,cols=Math.round(c.plen*4);let CW=18;const SZ=['thin','mid','full'];
+ const rh=p=>{const z=tr.pads[p].h||'thin';return z==='full'?Math.max(18,CW):z==='mid'?Math.max(16,Math.round(CW*.75)):16;};
+ const ys=()=>{const o=[0];for(let p=0;p<16;p++)o.push(o[p]+rh(p));return o;};let Y=ys();
+ const rowAt=y=>{for(let p=0;p<16;p++)if(y>=Y[p]&&y<Y[p+1])return p;return -1;};
+ const size=()=>{CW=Math.max(16,Math.floor((wrap.clientWidth-LBL-2)/cols));Y=ys();const H=Y[16];cv.width=(LBL+cols*CW)*devicePixelRatio;cv.height=H*devicePixelRatio;cv.style.width=LBL+cols*CW+'px';cv.style.height=H+'px';draw();};
  const find=(col,p)=>c.notes.findIndex(n=>n.p===p&&Math.abs(n.t*4-col)<.5);
  const draw=()=>{const g=cv.getContext('2d'),dp=devicePixelRatio;g.setTransform(dp,0,0,dp,0,0);g.fillStyle='#0f1116';g.fillRect(0,0,cv.width,cv.height);
   const ph=T.playing&&headNow()>=c.start&&headNow()<c.start+c.len?Math.floor(((headNow()-c.start)%c.plen)*4):-1;
-  for(let p=0;p<16;p++){const y=p*RH;g.fillStyle=p===PANEL.pad?'#2a3160':p%2?'#151820':'#12141a';g.fillRect(0,y,LBL,RH);g.fillStyle=PAD_COLORS[p];g.fillRect(0,y+1,4,RH-2);g.fillStyle=p===PANEL.pad?'#fff':'#9aa1b3';g.font='10px -apple-system,sans-serif';g.fillText((tr.pads[p].name||PAD_NAMES[p]).slice(0,13),9,y+10);
-   for(let s=0;s<cols;s++){const x=LBL+s*CW;g.fillStyle=s===ph?'#2b3040':(Math.floor(s/4)%2?'#1a1d25':'#1e222c');g.fillRect(x+1,y+1,CW-2,RH-2);}}
-  for(const n of c.notes){const s=Math.round(n.t*4);if(s>=cols)continue;g.fillStyle=PAD_COLORS[n.p];g.globalAlpha=.35+.65*n.v;g.fillRect(LBL+s*CW+2,n.p*RH+2,CW-4,RH-4);}g.globalAlpha=1;
-  g.fillStyle='rgba(255,255,255,.18)';for(let s=0;s<=cols;s+=16)g.fillRect(LBL+s*CW-1,0,2,16*RH);};
+  for(let p=0;p<16;p++){const y=Y[p],h=Y[p+1]-y,big=h>=24;g.fillStyle=p===PANEL.pad?'#2a3160':p%2?'#151820':'#12141a';g.fillRect(0,y,LBL,h);g.fillStyle=PAD_COLORS[p];g.fillRect(0,y+1,4,h-2);
+   g.font=(big?Math.min(20,h-8):11)+'px "Apple Color Emoji","Segoe UI Emoji",sans-serif';g.textBaseline='middle';g.fillText(PAD_EMOJI[p],8,y+h/2+1);
+   g.fillStyle=p===PANEL.pad?'#fff':'#9aa1b3';g.font=(big?'12px':'10px')+' -apple-system,sans-serif';g.fillText((tr.pads[p].name||PAD_NAMES[p]).slice(0,13),big?Math.min(34,h+12):24,y+h/2+1);g.textBaseline='alphabetic';
+   for(let s=0;s<cols;s++){const x=LBL+s*CW;g.fillStyle=s===ph?'#2b3040':(Math.floor(s/4)%2?'#1a1d25':'#1e222c');g.fillRect(x+1,y+1,CW-2,h-2);}}
+  for(const n of c.notes){const s=Math.round(n.t*4);if(s>=cols)continue;const y=Y[n.p],h=Y[n.p+1]-y;g.fillStyle=PAD_COLORS[n.p];g.globalAlpha=.35+.65*n.v;
+   const r=Math.min(6,h/4);g.beginPath();if(g.roundRect)g.roundRect(LBL+s*CW+2,y+2,CW-4,h-4,r);else g.rect(LBL+s*CW+2,y+2,CW-4,h-4);g.fill();}g.globalAlpha=1;
+  g.fillStyle='rgba(255,255,255,.18)';for(let s=0;s<=cols;s+=16)g.fillRect(LBL+s*CW-1,0,2,Y[16]);};
  EDIT={draw};
  let paint=null;
- cv.onmousedown=e=>{const r=cv.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,p=Math.floor(y/RH);if(p<0||p>15)return;
+ cv.onmousedown=e=>{const r=cv.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,p=rowAt(y);if(p<0)return;
   if(x<LBL){PANEL.pad=p;ensureAudio().then(()=>livePad(tr,p));draw();renderPanelPads();return;}
   const s=Math.floor((x-LBL)/CW);if(s<0||s>=cols)return;commit();const i=find(s,p);paint={add:e.button===2?false:i<0,v:e.shiftKey?.45:.9,p:null};
-  e.preventDefault();apply(s,p);const mv=ev=>{const rr=cv.getBoundingClientRect(),s2=Math.floor((ev.clientX-rr.left-LBL)/CW),p2=Math.floor((ev.clientY-rr.top)/RH);if(s2>=0&&s2<cols&&p2>=0&&p2<16)apply(s2,p2);};
+  e.preventDefault();apply(s,p);const mv=ev=>{const rr=cv.getBoundingClientRect(),s2=Math.floor((ev.clientX-rr.left-LBL)/CW),p2=rowAt(ev.clientY-rr.top);if(s2>=0&&s2<cols&&p2>=0)apply(s2,p2);};
   const up=()=>{removeEventListener('mousemove',mv);removeEventListener('mouseup',up);paint=null;renderTimeline();};addEventListener('mousemove',mv);addEventListener('mouseup',up);};
+ // double-click a name: thin bar -> 3/4 -> full square -> thin bar
+ cv.ondblclick=e=>{const r=cv.getBoundingClientRect(),x=e.clientX-r.left,p=rowAt(e.clientY-r.top);if(p<0||x>=LBL)return;const pd=tr.pads[p];pd.h=SZ[(SZ.indexOf(pd.h||'thin')+1)%3];DIRTY=true;size();};
  const apply=(s,p)=>{const k=s+':'+p;if(paint.p===k)return;paint.p=k;const i=find(s,p);
   if(paint.add&&i<0){c.notes.push({t:s/4,p,v:paint.v});if(AC)livePad(tr,p,paint.v);}else if(!paint.add&&i>=0)c.notes.splice(i,1);draw();};
  cv.oncontextmenu=e=>e.preventDefault();
