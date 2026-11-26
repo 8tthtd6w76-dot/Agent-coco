@@ -8,7 +8,7 @@
 const SK_L=34,SK_R=606;
 function makeSki(def,np){
  const big=cheatOn('bigair'),chile=cheatOn('greenchile');
- const S={name:'ski',def,np,state:'intro',introIdx:0,outroIdx:0,t:0,paused:false,hearts:4,clues:[],coins:0,kills:0,floats:[],obs:[],skiers:[],balls:[],
+ const S={name:'ski',def,np,state:'intro',introIdx:0,outroIdx:0,t:0,paused:false,hearts:6,revived:0,tut:0,tutT:0,learned:{},clues:[],coins:0,kills:0,floats:[],obs:[],skiers:[],balls:[],
   camY:0,endT:0,fx:[],crashes:0,tricks:0,gates:0,streak:0,chaser:null,len:def.length};
  const R=(typeof achRunStart==='function')?achRunStart(def,np):{};S.R=R;
  let seed=4242;const rng=()=>((seed=(seed*16807)%2147483647)/2147483647);
@@ -18,7 +18,7 @@ function makeSki(def,np){
  const O=S.obs,add=o=>O.push(o);
  const free=(x,y,r)=>!O.some(o=>Math.abs(o.y-y)<r+34&&Math.abs(o.x-x)<r+40);
  let coinTotal=0;
- for(let y=420;y<S.len-500;y+=64){const pr=y/S.len,dens=.3+pr*.45;
+ for(let y=1500;y<S.len-500;y+=64){const pr=y/S.len,dens=.16+pr*.36;   // v0.45: first 1500 px is an empty practice slope
   for(let k=0;k<5;k++){if(rng()>dens)continue;const x=SK_L+30+rng()*(SK_R-SK_L-60),r=rng();
    if(!free(x,y,22))continue;
    if(r<.5){const b=rng()<.3;add({k:b?'bigtree':'tree',x,y,r:b?16:12});}else if(r<.66)add({k:'rock',x,y,r:12});else if(r<.8)add({k:'stump',x,y,r:9});else add({k:'mogul',x,y,r:22});}}
@@ -41,8 +41,10 @@ function makeSki(def,np){
  const lead=()=>S.players.reduce((a,p)=>p.y>a.y?p:a,S.players[0]);
  const prog=()=>Math.min(1,lead().y/S.len);
  const ang=p=>p.dir*Math.PI/6;
- function crash(p,why,heart){if(p.inv>0||S.state!=='play')return;p.stun=heart?1:.55;p.hc=heart;p.v=0;p.inv=heart?1.7:.8;p.down=1;SFX.hurt();float(p.x,p.y-40,why,'#ff5a8a');S.streak=0;
-  if(heart){S.crashes++;R.hits=(R.hits||0)+1;S.hearts--;if(S.hearts<=0){S.hearts=0;finish(false,'Too many wipeouts!');}}}
+ function crash(p,why,heart){if(p.inv>0||S.state!=='play')return;if(heart&&p.v<110)heart=false;   // slow bumps never cost a heart
+  p.stun=heart?.8:.45;p.hc=heart;p.v=heart?40:p.v*.4;p.inv=heart?2.2:1.2;p.down=1;SFX.hurt();float(p.x,p.y-40,why,'#ff5a8a');S.streak=0;
+  if(heart){S.clean=0;S.crashes++;R.hits=(R.hits||0)+1;S.hearts--;
+   if(S.hearts<=0){if(!S.revived){S.revived=1;S.hearts=3;float(p.x,p.y-70,'SANDY PATCHED YOU UP! +3 HEARTS','#9fb');playStinger('clue');}else{S.hearts=0;finish(false,'Too many wipeouts!');}}}}
  function finish(win,why){S.state='end';S.win=win;S.why=why;S.endT=0;stopMusic();playStinger(win?'win':'lose');}
  function payout(){R.coinsGot=S.coins;R.kos=S.kills;
   if(typeof lv==='function'){const V=lv(def.id);if(S.crashes===0)V.noHit=1;if(S.tricks>=10)V.tricks=1;if(S.gates>=15)V.gates=1;}
@@ -61,29 +63,37 @@ function makeSki(def,np){
    p.inv=Math.max(0,p.inv-dt);p.snowCd-=dt;if(p.boost>0)p.boost-=dt;
    if(p.stun>0){p.stun-=dt;if(p.stun<=0)p.down=0;p.v*=Math.pow(.1,dt);}
    else{
-    // turning: tap = one step, hold = keep turning; already sideways + same way = shuffle sideways
-    const st=(hold('right')?1:0)-(hold('left')?1:0);
-    if(st&&p.air<=0){const side=Math.abs(p.dir)===3&&Math.sign(p.dir)===st;
-     if(tap('left')||tap('right')){p.turnT=.17;if(side)p.shuffle=.25;else p.dir=Math.max(-3,Math.min(3,p.dir+st));}
-     else{p.turnT-=dt;if(p.turnT<=0){p.turnT=.14;if(side)p.shuffle=.2;else p.dir=Math.max(-3,Math.min(3,p.dir+st));}}}
-    if(p.shuffle>0){p.shuffle-=dt;p.x+=Math.sign(p.dir)*80*dt;}
+    // v0.45 steering: HOLD left/right to carve that way (2 steps max), let go and the skis swing back to straight downhill
+    const st=(hold('right')?1:0)-(hold('left')?1:0);if(st)S.learned.steer=1;
+    if(p.air<=0){const tgt=st*2;p.turnT-=dt;if(p.dir!==tgt&&(p.turnT<=0||tap('left')||tap('right'))){p.turnT=st?.11:.09;p.dir+=Math.sign(tgt-p.dir);}}
     const tuck=hold('down')&&p.air<=0;if(tuck&&p.dir!==0){p.tuckT=(p.tuckT||0)-dt;if(p.tuckT<=0){p.dir-=Math.sign(p.dir);p.tuckT=.08;}}
-    p.brake=hold('up')&&p.air<=0;p.tuck=tuck;
-    let want=[330,290,185,0][Math.abs(p.dir)];if(tuck&&p.dir===0)want=430;if(hold('up')&&p.air<=0)want=Math.min(want,60);if(p.boost>0)want=540;
+    p.brake=hold('up')&&p.air<=0;p.tuck=tuck;if(p.brake||tuck)S.learned.speed=1;
+    let want=[270,250,215,150][Math.abs(p.dir)];if(tuck&&p.dir===0)want=370;if(hold('up')&&p.air<=0)want=Math.min(want,70);if(p.boost>0)want=470;
+    if(S.rubber)want+=S.rubber(p);
     if(p.air>0)want=p.v;p.v+=(want-p.v)*Math.min(1,dt*(want<p.v?2.6:1.25));
-    if(tap('jump')&&p.air<=0){p.air=p.airT=.42;p.airH=18;SFX.jump();}
+    if(tap('jump')&&p.air<=0){S.learned.jump=1;p.air=p.airT=.48;p.airH=18;SFX.jump();}
     if(tap('attack')){if(p.air>0){if(p.trickT<=0&&p.airT>.5){p.trickT=.36;p.trickPend++;p.spin=0;SFX.whoosh();}}
-     else if(p.snowCd<=0){p.snowCd=.4;const a=Math.abs(p.dir)===3?0:ang(p),sp=chile?620:430;S.balls.push({x:p.x,y:p.y+10,vx:Math.sin(a)*sp,vy:Math.cos(a)*sp+p.v*.5,life:.8});SFX.whoosh();}}
+     else if(p.snowCd<=0){S.learned.snow=1;p.snowCd=.4;const a=Math.abs(p.dir)===3?0:ang(p),sp=chile?620:430;S.balls.push({x:p.x,y:p.y+10,vx:Math.sin(a)*sp,vy:Math.cos(a)*sp+p.v*.5,life:.8});SFX.whoosh();}}
     if(tap('gadget')){if(p.boosts>0&&p.boost<=0){p.boosts--;p.boost=1.3;p.dir=0;SFX.gadget();float(p.x,p.y-40,'TURBO TUCK!','#7ff');bump&&bump('gadgets');}else if(p.boosts<=0)float(p.x,p.y-40,'NO TURBOS LEFT','#9fb');}}
+   // v0.45 dodge assist: if you're not steering, the skis lean gently around a tree/rock right in front of you
+   if(!p.down&&p.air<=0&&!(hold('left')||hold('right'))){for(const o of S.obs){if(o.y<p.y+10)continue;if(o.y>p.y+90)break;
+     if((o.k==='tree'||o.k==='bigtree'||o.k==='rock'||o.k==='snowman')&&Math.abs(o.x-p.x)<o.r+16){p.x+=(p.x<o.x?-1:1)*95*dt;break;}}}
    const a=ang(p);p.x+=Math.sin(a)*p.v*dt;p.y+=Math.cos(a)*p.v*dt;
    if(p.air>0){p.air-=dt;if(p.trickT>0){p.trickT-=dt;p.spin+=dt*18;}
     if(p.air<=0){p.air=0;if(p.trickT>0){p.trickT=0;p.trickPend=0;crash(p,'WIPEOUT!',false);}
      else if(p.trickPend>0){const n=p.trickPend*(big?2:1)*2;S.coins+=n;S.tricks+=p.trickPend;float(p.x,p.y-50,(p.trickPend>1?'TRICK x'+p.trickPend:'TRICK!')+' +$'+n*2,'#ffd23a');playStinger('clue');p.trickPend=0;bump&&bump('coins',n);}}}
-   if(p.x<SK_L||p.x>SK_R){crash(p,'TIMBER!',true);p.x=p.x<SK_L?SK_L+16:SK_R-16;p.dir=p.x<320?1:-1;}
+   if(p.x<SK_L+14||p.x>SK_R-14){p.x=Math.max(SK_L+14,Math.min(SK_R-14,p.x));if(p.dir&&Math.sign(p.dir)===(p.x<320?-1:1)){p.dir=0;p.v*=.85;float(p.x,p.y-40,'EDGE!','#9cf');}}
    const lt=p.trail[p.trail.length-1];if(!lt||Math.hypot(p.x-lt[0],p.y-lt[1])>8){p.trail.push([p.x,p.y,p.air>0]);if(p.trail.length>90)p.trail.shift();}}
-  // co-op: keep the slower skier near the leader
-  const L=lead();if(np>1)for(const p of S.players)if(p.y<S.camY-30){p.y=L.y-50;p.x=Math.max(SK_L+30,Math.min(SK_R-30,L.x+(p.i?40:-40)));p.inv=1.2;p.trail=[];float(p.x,p.y-40,'CATCH UP!','#9ff');}
-  S.camY+=((L.y-150)-S.camY)*Math.min(1,dt*7);
+  // v0.45 camera: keeps EVERY skier on screen. Co-op: the leader is held back and the trailer gets a tailwind,
+  // and only if they get really far apart does the trailer hop forward.
+  const L=lead(),T=S.players.reduce((a,p)=>p.y<a.y?p:a,S.players[0]),gap=L.y-T.y;
+  S.rubber=np>1?(p=>p===L&&gap>160?-Math.min(140,(gap-160)*.8):p===T&&gap>120?Math.min(160,gap-120):0):null;
+  if(np>1&&gap>340){T.y=L.y-120;T.x=Math.max(SK_L+30,Math.min(SK_R-30,L.x+(T.i?40:-40)));T.inv=1.2;T.trail=[];float(T.x,T.y-40,'CATCH UP!','#9ff');}
+  let want=np>1?(L.y+T.y)/2-200:L.y-130;want=Math.min(want,T.y-70);want=Math.max(want,L.y-(H-120));
+  S.camY+=(want-S.camY)*Math.min(1,dt*6);S.camY=Math.max(S.camY,L.y-(H-90));S.camY=Math.min(S.camY,T.y-50);
+  S.clean=(S.clean||0)+dt;if(S.clean>12&&S.hearts<6&&S.hearts>0){S.clean=0;S.hearts++;float(L.x,L.y-60,'+HEART (clean skiing)','#9fb');}
+  // tutorial: one lesson at a time on the practice slope (each stays up until you do it, or 9 s)
+  if(S.tut<4){S.tutT+=dt;const k=['steer','jump','snow','speed'][S.tut];if(S.learned[k]||S.tutT>9){if(S.learned[k]){SFX.pick();float(L.x,L.y-60,'NICE!','#7f7');}S.tut++;S.tutT=0;}}
   // obstacles and pickups
   for(const p of S.players){const z=p.air>0;
    for(const o of S.obs){if(o.y<p.y-80)continue;if(o.y>p.y+80)break;if(o.got)continue;const dx=p.x-o.x,dy=p.y-o.y;
@@ -97,12 +107,12 @@ function makeSki(def,np){
     if(z)continue;const d=Math.hypot(dx,dy);
     if(o.k==='ramp'){if(Math.abs(dx)<o.r+6&&Math.abs(dy)<14&&p.v>80){p.air=p.airT=big?1.8:1.05;p.airH=big?110:60;p.trickPend=0;SFX.jump();float(p.x,p.y-40,'BIG AIR! (ATTACK = trick)','#7ff');}continue;}
     if(o.k==='mogul'){if(d<o.r){if(o.hitBy!==p.i){o.hitBy=p.i;p.v*=.62;p.air=p.airT=.25;p.airH=10;}}continue;}
-    if(d<o.r+7){if(o.k==='stump')crash(p,'TRIPPED!',false);else crash(p,o.k==='rock'?'ROCK!':o.k==='snowman'?'SNOWMAN!':'TREE!',true);p.x+=dx>=0?14:-14;}}}
+    if(d<o.r+1){if(o.k==='stump')crash(p,'TRIPPED!',false);else crash(p,o.k==='rock'?'ROCK!':o.k==='snowman'?'SNOWMAN!':'TREE!',true);p.x+=dx>=0?14:-14;}}}
   // stooges skiing badly across the slope
   if(S.state==='play'&&S.skiers.filter(s=>!s.out).length<(prog()>.5?3:2)&&Math.random()<dt*.5){const fromL=Math.random()<.5;
    S.skiers.push({x:fromL?SK_L+20:SK_R-20,y:S.camY+H+40+Math.random()*160,vx:(fromL?1:-1)*(50+Math.random()*50),vy:150+Math.random()*60,look:Math.floor(Math.random()*3),w:Math.random()*6});}
   for(const s of S.skiers){if(s.out){s.t=(s.t||0)+dt;continue;}s.w+=dt;s.x+=(s.vx+Math.sin(s.w*3)*50)*dt;s.y+=s.vy*dt;if(s.x<SK_L+10||s.x>SK_R-10)s.vx*=-1;
-   for(const p of S.players)if(p.air<=0&&p.inv<=0&&Math.hypot(p.x-s.x,p.y-s.y)<24){crash(p,'STOOGE CRASH!',true);s.out=1;float(s.x,s.y-30,'OOF!','#c77dff');}}
+   for(const p of S.players)if(p.air<=0&&p.inv<=0&&Math.hypot(p.x-s.x,p.y-s.y)<24){crash(p,'STOOGE BUMP!',false);s.out=1;float(s.x,s.y-30,'OOF!','#c77dff');}}
   S.skiers=S.skiers.filter(s=>s.y>S.camY-120&&(!s.out||s.t<2));
   // snowballs
   for(const b of S.balls){b.life-=dt;b.x+=b.vx*dt;b.y+=b.vy*dt;
@@ -112,10 +122,10 @@ function makeSki(def,np){
   // Lefty on the snowmobile
   if(!S.chaser&&prog()>=def.chaseAt){S.chaser={x:L.x,y:S.camY-90,v:L.v,stall:0};float(L.x,L.y-60,'LEFTY\'S ON A SNOWMOBILE! SNOWBALL HIM!','#c77dff');startMusic('aq2_chase');playStinger('unlock');}
   const c=S.chaser;if(c){const tgt=S.players.reduce((a,p)=>Math.abs(p.y-c.y)<Math.abs(a.y-c.y)?p:a,S.players[0]);
-   if(c.stall>0){c.stall-=dt;c.v=Math.max(0,c.v-500*dt);}else{const gap=tgt.y-c.y,want=gap>420?470:Math.max(210,Math.min(372,tgt.v+45));c.v+=(want-c.v)*Math.min(1,dt*2);
+   if(c.stall>0){c.stall-=dt;c.v=Math.max(0,c.v-500*dt);}else{const gap=tgt.y-c.y,want=gap>420?400:Math.max(170,Math.min(310,tgt.v+20));c.v+=(want-c.v)*Math.min(1,dt*2);
     c.x+=Math.max(-150,Math.min(150,(tgt.x-c.x)*2))*dt;}
    c.y+=c.v*dt;if(c.y<S.camY-200)c.y=S.camY-200;
-   for(const p of S.players)if(p.inv<=0&&p.air<=0&&Math.hypot(p.x-c.x,p.y-c.y)<30){crash(p,'GOTCHA! (LEFTY)',true);c.y-=160;c.stall=.8;}}
+   for(const p of S.players)if(p.inv<=0&&p.air<=0&&Math.hypot(p.x-c.x,p.y-c.y)<24){crash(p,'GOTCHA! (LEFTY)',true);c.y-=280;c.stall=1.5;}}
   if(S.state==='play'&&L.y>=S.len)finish(true);};
  // ---------- drawing ----------
  const sy=y=>y-S.camY;
@@ -215,14 +225,16 @@ function makeSki(def,np){
   for(const b of S.balls){if(!chile&&abqDrawC('ski_misc',8+Math.floor(S.t*12)%4,b.x,sy(b.y),.17))continue;ctx.fillStyle=chile?'#7adf3a':'#fff';ctx.strokeStyle='#557';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(b.x,sy(b.y),5,0,7);ctx.fill();ctx.stroke();}
   for(const f of S.floats)text(f.t,Math.max(110,Math.min(W-110,f.x)),sy(f.y),f.t.length>10?12:15,f.c,'center');
   // HUD
-  rrect(4,2,W-8,30,8,'rgba(6,20,36,.92)','#ff7ab0',2);for(let i=0;i<Math.max(4,S.hearts);i++)heart(16+i*22,13,i<S.hearts);
+  rrect(4,2,W-8,30,8,'rgba(6,20,36,.92)','#ff7ab0',2);for(let i=0;i<Math.max(6,S.hearts);i++)heart(14+i*19,13,i<S.hearts);
   imgC('markers/clue',136,17,18);text(S.clues.length+'/3',148,22,12,'#ffd23a','left',null);text('$'+S.coins*2,188,22,12,'#fff','left',null);
   text('GATES '+S.gates,246,22,11,'#7ff','left',null);text('TRICKS '+S.tricks,318,22,11,'#ffd23a','left',null);text('TURBO x'+S.players[0].boosts,400,22,11,'#7ff','left',null);
   const ft=Math.round(10378-(10378-8678)*prog());text(ft.toLocaleString()+' ft',W-14,22,12,'#fff','right',null);
   rrect(W-14,44,6,H-64,3,'#1a2240',null);rrect(W-14,44+(H-64)*prog()-4,6,8,3,'#ffd23a',null);
   if(S.chaser&&S.state==='play'){const gap=lead().y-S.chaser.y;if(gap<260&&Math.floor(TIME*4)%2===0)text('LEFTY IS RIGHT BEHIND YOU!',W/2,52,13,'#ff9ac0','center');}
   if(S.state==='intro'){dim(.4);text(def.title,W/2,80,22,'#ffd23a','center');text(def.sub,W/2,104,13,'#cfe','center');sandyBox(def.intro,def.introExpr[S.introIdx%def.introExpr.length],Math.min(S.introIdx,def.intro.length-1));}
-  if(S.state==='play'&&R.t<9){rrect(70,H-58,500,46,10,'rgba(6,20,36,.85)','#2de2f5',2);text('LEFT/RIGHT turn    DOWN tuck    UP brake    JUMP hop',W/2,H-39,12,'#fff','center',null);text('ATTACK snowball (in the air: trick!)    GADGET turbo',W/2,H-21,12,'#cfe','center',null);}
+  if(S.state==='play'&&S.tut<4){const L2=[['HOLD LEFT or RIGHT to steer','Let go and you point straight downhill again'],['Press JUMP to hop','Hop over stumps and rocks (ramps launch you, ATTACK in the air = trick)'],
+    ['Press ATTACK to throw a snowball','Snowballs knock stooges over and stall Lefty\'s snowmobile'],['Hold DOWN to go faster, UP to slow down','GADGET = turbo tuck (3 per run)']][S.tut];
+   rrect(60,H-64,520,52,10,'rgba(6,20,36,.9)','#ffd23a',2);text('LESSON '+(S.tut+1)+'/4:  '+L2[0],W/2,H-42,15,'#ffd23a','center',null);text(L2[1],W/2,H-22,12,'#cfe','center',null);}
   if(S.state==='end'){dim(Math.min(.6,S.endT*.4));text(S.win?def.winText:'MISSION FAILED',W/2,H/2,32,S.win?'#ffd23a':'#ff5a8a','center');if(!S.win)text(S.why||'',W/2,H/2+30,16,'#fff','center');}
   if(S.state==='outro'){dim(.55);sandyBox(def.outro.lines,def.outro.expr[S.outroIdx%def.outro.expr.length],Math.min(S.outroIdx,def.outro.lines.length-1));}
   if(SAVE.testing)text('TESTING MODE',W/2,H-4,9,'#ff5ae0','center');};
