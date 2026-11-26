@@ -77,7 +77,14 @@ function frame(t){requestAnimationFrame(frame);const dt=Math.min(0.05,(t-last)/1
  if(scene){scene.update&&scene.update(dt);ctx.clearRect(0,0,W,H);scene.draw&&scene.draw();}
  if(typeof drawKeyHints==='function')drawKeyHints(dt);
  if(typeof drawTouch==='function')drawTouch();  // key hint pills at mission start (controls.js)
- if(typeof drawOverlay==='function')drawOverlay(dt);}  // achievement banner (achievements.js)
+ if(typeof drawOverlay==='function')drawOverlay(dt);
+ drawMuteTag(dt);}  // achievement banner (achievements.js)
 // mute toggle
-addEventListener('keydown',e=>{if(e.code==='KeyP'&&scene&&scene.name!=='level'){}if(e.code==='KeyN'){muted=!muted;}});
+// v0.40: N no longer mutes while you are typing a code (TESTING, MOONJUMP, TORNADO... have an N in them and used to switch all sound off).
+function typingText(e){const t=e&&e.target;return (typeof scene!=='undefined'&&scene&&scene.name==='code')||!!(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable));}
+addEventListener('keydown',e=>{if(e.code==='KeyN'&&!e.repeat&&!typingText(e)){muted=!muted;MUTE_T=2.5;}});
+let MUTE_T=0;  // shows a MUTED / SOUND ON pill for a moment after N, and a small MUTED tag while muted
+function drawMuteTag(dt){if(MUTE_T>0)MUTE_T-=dt;if(!muted&&MUTE_T<=0)return;ctx.save();ctx.globalAlpha=MUTE_T>0?1:.75;
+ const s=muted?(MUTE_T>0?'SOUND OFF  (press N to turn it back on)':'MUTED (N)'):'SOUND ON';ctx.font='bold 11px "Trebuchet MS",Verdana,sans-serif';const w=ctx.measureText(s).width+16;
+ rrect(8,H-26,w,18,9,'rgba(6,20,36,.85)',muted?'#ff5a8a':'#7f7',2);text(s,8+w/2,H-13,11,'#fff','center',null);ctx.restore();}
 addEventListener('pointerdown',()=>{audio()&&AC.state==='suspended'&&AC.resume();},{once:false});
