@@ -1,6 +1,7 @@
 // ===== Groove Studio app: top bar, keyboard, files, autosave, drag and drop =====
 'use strict';
-const NATIVE=window.native||null;   // Electron bridge (preload.js); the browser build falls back to downloads
+const NATIVE=window.native||null;
+let FRAMES=0;   // Electron bridge (preload.js); the browser build falls back to downloads
 let TOAST_T=0;
 function toast(msg,bad){const t=$('#toast');t.textContent=msg;t.className='show'+(bad?' bad':'');clearTimeout(TOAST_T);TOAST_T=setTimeout(()=>t.className='',2600);}
 function menu(x,y,items){const m=$('#ctx');m.innerHTML='';items.forEach(it=>{if(!it){m.appendChild(el('hr'));return;}const d=el('div','',esc(it[0])+(it[2]?`<span>${esc(it[2])}</span>`:''));d.onmousedown=e=>{e.stopPropagation();};d.onclick=()=>{hideMenu();it[1]();};m.appendChild(d);});
@@ -111,7 +112,7 @@ function initScroll(){const W=$('#lanesWrap'),H=$('#headList');W.addEventListene
  H.addEventListener('wheel',e=>{W.scrollTop+=e.deltaY;},{passive:true});}
 
 // ---------- every frame: playhead, meters, live editor ----------
-function frame(){drawHead();runLights();quickTick();if(MIX){const m=$('#master'),g=m.getContext('2d'),lv=Math.min(1,meterLevel(MIX.an));g.clearRect(0,0,14,36);g.fillStyle=lv>.95?'#ff4d5e':'#6bcb77';g.fillRect(2,36-lv*36,10,lv*36);
+function frame(){drawHead();runLights();quickTick();if(!(FRAMES=(FRAMES+1)%15))renderNow();if(MIX){const m=$('#master'),g=m.getContext('2d'),lv=Math.min(1,meterLevel(MIX.an));g.clearRect(0,0,14,36);g.fillStyle=lv>.95?'#ff4d5e':'#6bcb77';g.fillRect(2,36-lv*36,10,lv*36);
   document.querySelectorAll('.th').forEach(h=>{const s=MIX.strips[h.dataset.id];const i=h.querySelector('.meter i');if(i)i.style.height=Math.min(100,(s?meterLevel(s.an):0)*100)+'%';});}
  const vu=$('#micVu');if(vu&&MIC){vu.style.width=Math.min(100,MIC.lvl*100)+'%';MIC.lvl*=.92;}
  if(T.playing&&EDIT)EDIT.draw();requestAnimationFrame(frame);}

@@ -9,7 +9,15 @@ function lightUp(ev){const col=instColor(ev.tr,ev.p);
  const hd=document.querySelector(`.th[data-id="${ev.tr}"]`);if(hd)hd.animate([{backgroundColor:col+'33'},{backgroundColor:'transparent'}],{duration:220});
  if(ev.p>=0&&UI.sel.track===ev.tr&&PANEL.tab!=='quick'){const pd=document.querySelector(`.pad[data-p="${ev.p}"]`);if(pd)pd.animate([{background:col,color:'#111'},{}],{duration:180});}
  document.querySelectorAll(`.qtile[data-tr="${ev.tr}"]`).forEach(q=>{if(+q.dataset.p===ev.p||q.dataset.p==='-1'&&ev.p<0)glow(q,col,true);});
- const dot=document.querySelector(`.qlive [data-tr="${ev.tr}"][data-p="${ev.p<0?-1:ev.p}"]`);if(dot)glow(dot,col,true);}
+ const dot=document.querySelector(`.qlive [data-tr="${ev.tr}"][data-p="${ev.p<0?-1:ev.p}"]`);if(dot)glow(dot,col,true);
+ const nl=document.querySelector(`#nowLights [data-tr="${ev.tr}"][data-p="${ev.p<0?-1:ev.p}"]`);if(nl){nl.animate([{background:col+'55',borderColor:col,color:'#fff'},{}],{duration:260});nl.firstChild.animate([{opacity:1,boxShadow:`0 0 10px 2px ${col}`},{}],{duration:260});}}
+// the Now playing strip: one light per sound in the song
+function renderNow(){const box=$('#nowLights');if(!box)return;const items=[];
+ P.tracks.forEach(t=>{if(t.type==='drums'){const ps=new Set();t.clips.forEach(c=>c.notes.forEach(n=>ps.add(n.p)));[...ps].sort((a,b)=>a-b).forEach(p=>items.push({tr:t,p,n:(t.pads[p].name||PAD_NAMES[p]),c:PAD_COLORS[p]}));}
+  else if(t.clips.some(c=>t.type==='audio'?c.src:c.notes.length))items.push({tr:t,p:-1,n:t.name,c:t.color});});
+ const key=items.map(i=>i.tr.id+i.p+i.n+i.c).join('|');if(key===box.dataset.k)return;box.dataset.k=key;box.innerHTML='';
+ items.forEach(i=>{const s=el('span','','<i></i>'+esc(i.n));s.style.setProperty('--c',i.c);s.dataset.tr=i.tr.id;s.dataset.p=i.p;s.onclick=()=>{PANEL.tab='track';select(i.tr.id,null);if(i.p>=0){PANEL.pad=i.p;renderPanel();}};box.appendChild(s);});
+ if(!items.length)box.appendChild(el('span','','<i></i>Nothing yet: add a beat or press Record'));}
 function runLights(){if(!AC||!VIS.length)return;const now=AC.currentTime;let keep=0;
  for(let i=0;i<VIS.length;i++){const e=VIS[i];if(e.t<=now+.01)lightUp(e);else VIS[keep++]=e;}VIS.length=keep;}
 
@@ -22,7 +30,7 @@ const QUICK_INST=[
  {id:'bass',n:'Bass',e:'🎸',kind:'keys',preset:3,oct:2,col:'#ff922b'},{id:'keys',n:'Piano',e:'🎹',kind:'keys',preset:1,oct:4,col:'#4dabf7'},
  {id:'bell',n:'Bells',e:'🛎️',kind:'keys',preset:2,oct:5,col:'#ffe066'},{id:'pluck',n:'Pluck',e:'🪕',kind:'keys',preset:7,oct:4,col:'#63e6be'},
  {id:'lead',n:'Lead',e:'🎺',kind:'keys',preset:0,oct:4,col:'#e599f7'},{id:'organ',n:'Organ',e:'⛪',kind:'keys',preset:5,oct:3,col:'#ff8787'}];
-const QK={inst:'kick',layers:[],tapT:[],armedSnap:null,held:{}};
+const QK={snap:2,inst:'kick',layers:[],tapT:[],armedSnap:null,held:{}};
 const qInst=()=>QUICK_INST.find(q=>q.id===QK.inst)||QUICK_INST[0];
 function qColor(q){return q.kind==='pad'?PAD_COLORS[q.p]:q.col;}
 // the track a Quick instrument plays on (made on first use)
@@ -38,7 +46,7 @@ function qTap(m,vel=1){const q=qInst();ensureAudio().then(()=>{const tr=qTrack(q
   if(!T.playing)return;
   if(!QK.armedSnap){QK.armedSnap=JSON.stringify(P);}
   const late=((AC.outputLatency||0)+(AC.baseLatency||0))*P.bpm/60;let b=headNow()-late;
-  if(loopOn()&&b<P.loop.a)b+=P.loop.b-P.loop.a;b=Math.round(b*4)/4;if(loopOn()&&b>=P.loop.b)b=P.loop.a;
+  if(loopOn()&&b<P.loop.a)b+=P.loop.b-P.loop.a;const g=QK.snap;b=Math.round(b*g)/g;if(loopOn()&&b>=P.loop.b)b=P.loop.a;
   let c=tr.clips.find(c=>b>=c.start&&b<c.start+c.len);
   if(!c){c=newClip(tr.type,P.loop.a,P.loop.b-P.loop.a,P.loop.b-P.loop.a);c.name='Quick';tr.clips.push(c);}
   const t=((b-c.start)%c.plen+c.plen)%c.plen;
@@ -46,7 +54,7 @@ function qTap(m,vel=1){const q=qInst();ensureAudio().then(()=>{const tr=qTrack(q
   else{if(!c.notes.length)QK.needPanel=true;const n={t,d:.5,m,v:.85};c.notes=c.notes.filter(x=>!(x.m===m&&Math.abs(x.t-t)<.01));c.notes.push(n);QK.held[m]={n,b:headNow(),tr};}
   c.notes.sort((x,y)=>x.t-y.t);DIRTY=true;QK.dirtyDraw=true;});}
 function qRelease(m){const q=qInst(),tr=qTrack(q,false);if(tr)liveKeyUp(tr,m);const H=QK.held[m];delete QK.held[m];
- if(H&&T.playing){let d=headNow()-H.b;if(d<0)d+=P.loop.b-P.loop.a;H.n.d=Math.max(.25,Math.round(d*4)/4);}}
+ if(H&&T.playing){let d=headNow()-H.b;if(d<0)d+=P.loop.b-P.loop.a;H.n.d=Math.max(1/QK.snap,Math.round(d*QK.snap)/QK.snap);}}
 // a layer = everything tapped since you picked the instrument; it is saved for "Undo last layer"
 function qFinishLayer(){if(QK.armedSnap){HIST.u.push(QK.armedSnap);HIST.r=[];QK.layers.push({snap:QK.armedSnap,name:qInst().n});QK.armedSnap=null;}}
 function qPick(id){qFinishLayer();QK.inst=id;renderPanel();}
@@ -69,7 +77,8 @@ function quickPanel(Pn){const q=qInst(),col=qColor(q);
  const M=el('div','col');M.style.flex='1';
  const top=el('div','row');const pb=el('button','qplay'+(T.playing?' on':''),T.playing?'■ Stop':'▶ Play');pb.onclick=qPlay;
  top.append(el('h4','','2 · Play'),pb,el('span','hint',P.loop.on?`Looping bars ${P.loop.a/4+1}–${P.loop.b/4}`:'Plays a 2–4 bar loop'));M.append(top);
- M.append(el('h4','',`3 · Tap ${q.n}`));
+ const sn=el('div','row');sn.append(el('h4','',`3 · Tap ${q.n}`),el('span','hint','Snap taps to:'));const sg=el('div','qsnap');
+ [[4,'Tight (1/16)'],[2,'Normal (1/8)'],[1,'Simple (beats)']].forEach(([v,n])=>{const b=btn(n,()=>{QK.snap=v;renderPanel();},'',QK.snap===v?'on':'');sg.appendChild(b);});sn.append(sg);M.append(sn);
  if(q.kind==='pad'){const t=el('button','qtap',`<span class="em">${q.e}</span><b>TAP</b><span class="hint">click, or press any letter key</span>`);t.style.setProperty('--c',col);
   const tr=qTrack(q,false);if(tr){t.dataset.tr=tr.id;t.dataset.p=q.p;t.classList.add('qtile');}
   t.onpointerdown=e=>{e.preventDefault();qTap(0,e.shiftKey?.5:1);glow(t,col,true);};M.append(t);}
@@ -79,7 +88,7 @@ function quickPanel(Pn){const q=qInst(),col=qColor(q);
  body.appendChild(M);
  // layers + tempo
  const R=el('div','col');R.style.width='230px';R.style.flex='none';R.append(el('h4','','Layers'));
- R.append(btn('↶ Undo last layer',qUndoLayer,'Takes out everything you tapped with the last sound'),btn('Clear '+q.n,qClearInst,'Removes this sound from the loop'));
+ R.append(btn('↶ Undo last layer',qUndoLayer,'Takes out everything you tapped with the last sound'),btn('Clear '+q.n,qClearInst,'Removes this sound from the loop'),btn('Repeat through whole song',qRepeatAll,'Stretches your Quick layers so they play from the start to the end of the song'));
  const live=el('div','qlive');P.tracks.filter(t=>t.quick).forEach(t=>{if(t.type==='drums'){const ps=new Set();t.clips.forEach(c=>c.notes.forEach(n=>ps.add(n.p)));ps.forEach(p=>{const d=el('span','',esc(t.pads[p].name||PAD_NAMES[p]));d.style.setProperty('--c',PAD_COLORS[p]);d.dataset.tr=t.id;d.dataset.p=p;live.appendChild(d);});}
   else if(t.clips.some(c=>c.notes.length)){const d=el('span','',esc(t.name.replace('Quick ','')));d.style.setProperty('--c',t.color);d.dataset.tr=t.id;d.dataset.p=-1;live.appendChild(d);}});
  R.append(el('div','hint',live.children.length?'In your loop (they light up as they play):':'Your layers will show up here.'),live);
@@ -96,3 +105,6 @@ addEventListener('keyup',e=>{if(PANEL.tab!=='quick'||!QK.keyDown)return;const m=
 // after taps: redraw the timeline (and the panel when a new sound joined), a few times a second at most
 function quickTick(){if(!QK.dirtyDraw&&!QK.needPanel)return;const now=performance.now();if(now-(QK.lastDraw||0)<150)return;QK.lastDraw=now;
  if(QK.dirtyDraw){QK.dirtyDraw=false;renderTimeline();}if(QK.needPanel&&PANEL.tab==='quick'){QK.needPanel=false;renderPanel();}else QK.needPanel=false;}
+function qRepeatAll(){qFinishLayer();const end=Math.max(songEnd(),P.loop.b);let n=0;commit();
+ P.tracks.filter(t=>t.quick).forEach(t=>t.clips.forEach(c=>{if(!c.notes.length)return;const st=c.start-Math.floor(c.start/c.plen)*c.plen;c.start=st;c.len=Math.max(c.plen,end-st);n++;}));
+ renderTimeline();toast(n?'Your Quick layers now play through the whole song':'Tap something first');}
