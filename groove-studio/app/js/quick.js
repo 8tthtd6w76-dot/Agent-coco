@@ -29,10 +29,12 @@ const QUICK_INST=[
  {id:'cowbell',n:'Cowbell',e:'🔔',kind:'pad',p:9},{id:'conga',n:'Conga',e:'🪇',kind:'pad',p:11},{id:'snap',n:'Snap',e:'🫰',kind:'pad',p:13},{id:'tom',n:'Tom',e:'🛢️',kind:'pad',p:7},
  {id:'bass',n:'Bass',e:'🎸',kind:'keys',preset:3,oct:2,col:'#ff922b'},{id:'keys',n:'Piano',e:'🎹',kind:'keys',preset:1,oct:4,col:'#4dabf7'},
  {id:'bell',n:'Bells',e:'🛎️',kind:'keys',preset:2,oct:5,col:'#ffe066'},{id:'pluck',n:'Pluck',e:'🪕',kind:'keys',preset:7,oct:4,col:'#63e6be'},
- {id:'lead',n:'Lead',e:'🎺',kind:'keys',preset:0,oct:4,col:'#e599f7'},{id:'organ',n:'Organ',e:'⛪',kind:'keys',preset:5,oct:3,col:'#ff8787'}];
+ {id:'lead',n:'Lead',e:'🎺',kind:'keys',preset:0,oct:4,col:'#e599f7'},{id:'organ',n:'Organ',e:'⛪',kind:'keys',preset:5,oct:3,col:'#ff8787'},
+ {id:'voice',n:'Voice',e:'🎤',kind:'voice',col:'#ffd93d'}];
 const QK={snap:2,inst:'kick',layers:[],tapT:[],armedSnap:null,held:{}};
 const qInst=()=>QUICK_INST.find(q=>q.id===QK.inst)||QUICK_INST[0];
 function qColor(q){return q.kind==='pad'?PAD_COLORS[q.p]:q.col;}
+function qVoiceTrack(){return P.tracks.filter(t=>t.quick==='voice').slice(-1)[0]||null;}
 // the track a Quick instrument plays on (made on first use)
 function qTrack(q,make){if(q.kind==='pad'){let t=P.tracks.find(t=>t.quick==='beat');if(!t&&make){t=newTrack('drums','Quick Beat');t.quick='beat';t.color='#ff5d5d';P.tracks.push(t);updateMix();QK.needPanel=true;}return t;}
  let t=P.tracks.find(t=>t.quick===q.id);if(!t&&make){t=newTrack('synth','Quick '+q.n);t.quick=q.id;t.color=q.col;t.patch=fm1Patch(q.preset);P.tracks.push(t);updateMix();QK.needPanel=true;}return t;}
@@ -70,16 +72,21 @@ function quickPanel(Pn){const q=qInst(),col=qColor(q);
  const body=el('div','pb quick');Pn.appendChild(body);
  // sounds
  const L=el('div','col');L.style.width='420px';L.style.flex='none';L.append(el('h4','','1 · Pick a sound'));
- const g=el('div','qgrid');QUICK_INST.forEach(it=>{const tr=qTrack(it,false),b=el('button','qtile'+(it.id===QK.inst?' on':''),`<span class="em">${it.e}</span><span>${it.n}</span>`);
+ const g=el('div','qgrid');QUICK_INST.forEach(it=>{const tr=it.kind==='voice'?qVoiceTrack():qTrack(it,false),b=el('button','qtile'+(it.id===QK.inst?' on':''),`<span class="em">${it.e}</span><span>${it.n}</span>`);
   b.style.setProperty('--c',qColor(it));if(tr){b.dataset.tr=tr.id;b.dataset.p=it.kind==='pad'?it.p:-1;}b.onclick=()=>qPick(it.id);g.appendChild(b);});
  L.append(g);body.appendChild(L);
  // play + tap
  const M=el('div','col');M.style.flex='1';
  const top=el('div','row');const pb=el('button','qplay'+(T.playing?' on':''),T.playing?'■ Stop':'▶ Play');pb.onclick=qPlay;
  top.append(el('h4','','2 · Play'),pb,el('span','hint',T.playing?'':'(optional: or just start playing below)'),el('span','hint',P.loop.on?`Looping bars ${P.loop.a/4+1}–${P.loop.b/4}`:'Plays a 2–4 bar loop'));M.append(top);
- const sn=el('div','row');sn.append(el('h4','',`3 · Tap ${q.n}`),el('span','hint','Snap taps to:'));const sg=el('div','qsnap');
+ const sn=el('div','row');if(q.kind==='voice')sn.style.display='none';sn.append(el('h4','',`3 · Tap ${q.n}`),el('span','hint','Snap taps to:'));const sg=el('div','qsnap');
  [[4,'Tight (1/16)'],[2,'Normal (1/8)'],[1,'Simple (beats)']].forEach(([v,n])=>{const b=btn(n,()=>{QK.snap=v;renderPanel();},'',QK.snap===v?'on':'');sg.appendChild(b);});sn.append(sg);M.append(sn);
- if(q.kind==='pad'){const t=el('button','qtap',`<span class="em">${q.e}</span><b>TAP</b><span class="hint">click, or press any letter key</span>`);t.style.setProperty('--c',col);
+ if(q.kind==='voice'){const v=el('div','qvoice');const rb=el('button','qrec'+(QK.vrec?' on':''),QK.vrec?'■ Stop':'🎤 Record a layer');
+  rb.onclick=()=>QK.vrec?qVoiceStop(true):qVoiceRecord();
+  v.append(rb,el('div','qvinfo',`<div class="vu"><i id="micVu"></i></div><div class="hint">It counts you in, records <b>one time around the loop</b>, then plays it back as a new layer. Press again to add another layer on top (harmonies, ad-libs, beatbox…). Headphones help so the mic doesn't hear the speakers. The first time, your Mac asks to use the microphone: click Allow.</div>`));
+  const hm=btn(PANEL.mon?'Hear myself: on':'Hear myself: off',async()=>{PANEL.mon=!PANEL.mon;if(PANEL.mon)await micOn().catch(()=>{});micMonitor(PANEL.mon);renderPanel();},'Plays your mic through the speakers. Use headphones.',PANEL.mon?'on':'');
+  v.querySelector('.qvinfo').appendChild(hm);M.append(v);}
+ else if(q.kind==='pad'){const t=el('button','qtap',`<span class="em">${q.e}</span><b>TAP</b><span class="hint">click, or press any letter key</span>`);t.style.setProperty('--c',col);
   const tr=qTrack(q,false);if(tr){t.dataset.tr=tr.id;t.dataset.p=q.p;t.classList.add('qtile');}
   t.onpointerdown=e=>{e.preventDefault();qTap(0,e.shiftKey?.5:1);glow(t,col,true);};M.append(t);}
  else{const ks=el('div','qkeys');qNotes(q).forEach((m,i)=>{const k=el('button','qkey',`<b>${NOTE_NAMES[((m%12)+12)%12]}</b><span>${'ASDFGHJK'[i]}</span>`);k.style.setProperty('--c',col);k.dataset.m=m;
@@ -90,7 +97,7 @@ function quickPanel(Pn){const q=qInst(),col=qColor(q);
  const R=el('div','col');R.style.width='230px';R.style.flex='none';R.append(el('h4','','Layers'));
  R.append(btn('↶ Undo last layer',qUndoLayer,'Takes out everything you tapped with the last sound'),btn('Clear '+q.n,qClearInst,'Removes this sound from the loop'),btn('Repeat through whole song',qRepeatAll,'Stretches your Quick layers so they play from the start to the end of the song'));
  const live=el('div','qlive');P.tracks.filter(t=>t.quick).forEach(t=>{if(t.type==='drums'){const ps=new Set();t.clips.forEach(c=>c.notes.forEach(n=>ps.add(n.p)));ps.forEach(p=>{const d=el('span','',esc(t.pads[p].name||PAD_NAMES[p]));d.style.setProperty('--c',PAD_COLORS[p]);d.dataset.tr=t.id;d.dataset.p=p;live.appendChild(d);});}
-  else if(t.clips.some(c=>c.notes.length)){const d=el('span','',esc(t.name.replace('Quick ','')));d.style.setProperty('--c',t.color);d.dataset.tr=t.id;d.dataset.p=-1;live.appendChild(d);}});
+  else if(t.clips.some(c=>t.type==='audio'?c.src:c.notes.length)){const d=el('span','',esc(t.name.replace('Quick ','')));d.style.setProperty('--c',t.color);d.dataset.tr=t.id;d.dataset.p=-1;live.appendChild(d);}});
  R.append(el('div','hint',live.children.length?'In your loop (they light up as they play):':'Your layers will show up here.'),live);
  R.append(el('h4','','Tempo'),el('div','row',`<span class="hint">${P.bpm} BPM</span>`));const tt=btn('Tap tempo',qTapTempo,'Tap 4 or more times at the speed you want');R.append(tt);
  body.appendChild(R);}
@@ -98,7 +105,7 @@ function panelTabs(){const w=el('div','tabs');
  [['track','Track tools'],['quick','⚡ Jam (easy)']].forEach(([k,n])=>{const b=el('button',PANEL.tab===k?'on':'',n);b.onclick=()=>{if(k!=='quick')qFinishLayer();PANEL.tab=k;renderPanel();};w.appendChild(b);});return w;}
 // keyboard while Quick Loop is open: letters tap the drum, A–K play the 8 scale keys
 addEventListener('keydown',e=>{if(PANEL.tab!=='quick'||e.metaKey||e.ctrlKey||e.altKey||e.repeat)return;if(e.target.closest&&e.target.closest('input[type=text],input[type=number],#songName'))return;
- const k=e.key.toLowerCase();if(k.length!==1||!/[a-z0-9]/.test(k))return;const q=qInst();e.stopImmediatePropagation();e.preventDefault();
+ const k=e.key.toLowerCase();if(k.length!==1||!/[a-z0-9]/.test(k))return;const q=qInst();if(q.kind==='voice')return;e.stopImmediatePropagation();e.preventDefault();
  if(q.kind==='pad'){qTap(0,e.shiftKey?.5:1);glow(document.querySelector('.qtap'),qColor(q),true);}
  else{const i='asdfghjk'.indexOf(k);if(i<0)return;const m=qNotes(q)[i];if(QK.held[m])return;qTap(m);const kb=document.querySelector(`.qkey[data-m="${m}"]`);glow(kb,qColor(q),true);QK.keyDown=QK.keyDown||{};QK.keyDown[e.code]=m;}},true);
 addEventListener('keyup',e=>{if(PANEL.tab!=='quick'||!QK.keyDown)return;const m=QK.keyDown[e.code];if(m!=null){delete QK.keyDown[e.code];qRelease(m);}},true);
@@ -145,3 +152,26 @@ function openJam(){PANEL.tab='quick';renderPanel();const b=document.getElementBy
  const W=document.getElementById('welcome');const done=go=>{W.classList.remove('show');try{localStorage.setItem('gs-welcomed','1');}catch(e){}if(go){ensureAudio();openJam();}};
  document.getElementById('wGo').onclick=()=>done(true);document.getElementById('wSkip').onclick=()=>done(false);
  if(!seen){W.classList.add('show');}})();
+
+// ---------- 🎤 Voice in Jam: record exactly one pass of the loop onto a new layer, without stopping the music ----------
+async function qVoiceRecord(){try{await micOn();}catch(e){toast('Microphone is blocked. Allow it in System Settings > Privacy & Security > Microphone.',true);return;}
+ qFinishLayer();qEnsureLoop();const sp=()=>60/P.bpm;
+ if(!T.playing){await play(P.loop.a-4);syncTop();}   // one bar count-in
+ const L0=(AC.currentTime-T.t0)/sp(),s0=songAt(L0);
+ const Lstart=s0<P.loop.a?L0+(P.loop.a-s0):L0+(P.loop.b-s0)<L0+.5?L0+(P.loop.b-s0)+(P.loop.b-P.loop.a):L0+(P.loop.b-s0);
+ const len=P.loop.b-P.loop.a,tA=T.t0+Lstart*sp(),tB=tA+len*sp();
+ MIC.chunks=[];MIC.node.port.postMessage({on:true});QK.vrec={tA,tB,len,start:P.loop.a,timer:null};renderPanel();
+ const tickV=()=>{if(!QK.vrec)return;const now=AC.currentTime,R=QK.vrec;
+  if(now<R.tA){const beats=Math.ceil((R.tA-now)/sp());qStatus(`Get ready… ${beats}`);}else qStatus(`🔴 Recording… sing! ${Math.max(0,Math.ceil((R.tB-now)/sp()))} beats left`);
+  if(now>=R.tB+.25)qVoiceStop(false);else R.timer=setTimeout(tickV,60);};tickV();}
+function qVoiceStop(cancel){const R=QK.vrec;if(!R)return;QK.vrec=null;clearTimeout(R.timer);MIC.node.port.postMessage({on:false});const chunks=MIC.chunks||[];MIC.chunks=null;
+ if(cancel||!chunks.length||AC.currentTime<R.tA+.5){qStatus('Recording cancelled.');renderPanel();return;}
+ const sr=AC.sampleRate,lat=(AC.outputLatency||0)+(AC.baseLatency||0)+(P.latency||0)/1000,first=chunks[0].t;let n=0;chunks.forEach(c=>n+=c.d.length);
+ const all=new Float32Array(n);let o=0;chunks.forEach(c=>{all.set(c.d,o);o+=c.d.length;});
+ const tEnd=Math.min(R.tB,AC.currentTime),N=Math.round((tEnd-R.tA)*sr),d=new Float32Array(N),s0=Math.round((R.tA+lat-first)*sr);
+ for(let i=0;i<N;i++){const j=s0+i;if(j>=0&&j<all.length)d[i]=all[j];}
+ commit();QK.layers.push({snap:HIST.u[HIST.u.length-1],name:'Voice'});
+ const id=uid('a');AUDIO[id]={sr,d};const k=P.tracks.filter(t=>t.quick==='voice').length+1;const tr=newTrack('audio','Voice '+k);tr.quick='voice';tr.color='#ffd93d';tr.arm=false;tr.fx.rev=.2;
+ const beats=(tEnd-R.tA)*P.bpm/60,c=newClip('audio',R.start,R.len,Math.max(.5,Math.min(R.len,beats)));c.src=id;c.name='Voice '+k;tr.clips.push(c);P.tracks.push(tr);
+ if(peakOf(d)>.001)c.gain=Math.min(3,.8/peakOf(d));   // even out quiet takes
+ updateMix();renderTimeline();renderPanel();qStatus('Added Voice '+k+'! Record another layer, or pick a different sound.');toast('Voice layer added');}

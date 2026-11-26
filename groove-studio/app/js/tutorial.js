@@ -11,7 +11,7 @@ const TUT_STEPS=[
  {sel:'#nowbar',title:'Watch the sounds light up',text:'Every instrument has its own color. Each light flashes the moment you hear that sound, so you can see what makes up the song right now.',
   show:async()=>{if(!T.playing)await play(P.loop.on?P.loop.a:0);syncTop();}},
  {sel:'#bJam',title:'⚡ Jam: the easy way to add layers',text:'Jam mode lets you play along live. Everything you play snaps to the beat and gets added to the loop.',before:()=>openJam()},
- {sel:'.qgrid',title:'1. Pick a sound',text:'Drums on top, notes (bass, piano, bells…) below. Each tile has its own color.',before:()=>openJam()},
+ {sel:'.qgrid',title:'1. Pick a sound',text:'Drums on top, notes (bass, piano, bells…) below, and 🎤 <b>Voice</b> to record yourself into the loop. Each tile has its own color.',before:()=>openJam()},
  {sel:'.qtap,.qkeys',title:'2. Just play',text:'Click the big pad, or press any letter key on your keyboard. Notes only play in the song’s key, so nothing sounds wrong.<br><br>• Song <b>playing</b>: each hit joins the loop right away.<br>• Song <b>stopped</b>: play a rhythm, then stop for 2 seconds. Groove Studio finds your tempo and turns it into a loop.',
   before:()=>openJam(),show:async()=>{if(QK.inst!=='clap')qPick('clap');await wait(150);const pad=document.querySelector('.qtap');const beats=[0,1,1.5,2,3,3.5];const ms=60000/P.bpm;
    if(!T.playing){await play(P.loop.on?P.loop.a:0);syncTop();}
