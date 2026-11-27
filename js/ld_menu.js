@@ -80,7 +80,7 @@ const LDShop={name:'ldshop',make(){this.tab=0;this.sel=0;this.scroll=0;this.msg=
   if(anyPressed('ok')||anyPressed('jump'))this.buyStar(R[this.sel]);if(anyPressed('gadget'))this.buyCash(R[this.sel]);
   if(backPressed()||anyPressed('start')){SFX.move();pop();}},
  draw(){ldMenuBg();dim(.2);text('THE WORKSHOP',W/2,40,28,'#ffd23a','center','#1b0a3a');
-  text('★ '+ldStarsFree(),24,30,18,'#ffd23a','left');text('$'+SAVE.coins+'   parts '+ldPartsHave(),W-24,30,15,'#7f7','right');
+  if(typeof ldIcon==='function'&&ldIcon(10,34,24,.36)){ctx.font='bold 15px Trebuchet MS';ldIcon(0,W-24-ctx.measureText('$'+SAVE.coins+'   parts '+ldPartsHave()).width-14,25,.26);text(''+ldStarsFree(),52,30,18,'#ffd23a','left');text('$'+SAVE.coins+'   parts '+ldPartsHave(),W-24,30,15,'#7f7','right');}else{text('★ '+ldStarsFree(),24,30,18,'#ffd23a','left');text('$'+SAVE.coins+'   parts '+ldPartsHave(),W-24,30,15,'#7f7','right');}
   this.tabs.forEach((t,i)=>{const x=40+i*142,s=i===this.tab;rrect(x,56,134,28,9,s?'#ffd23a':'rgba(10,8,40,.9)',s?'#fff':'#2de2f5',2);text(t,x+67,75,13,s?'#102':'#fff','center',null);
    MUI.add(x,56,134,28,{click:()=>{this.tab=i;this.sel=0;this.scroll=0;SFX.move();}});});
   const R=this.rows();panel(24,92,360,330);

@@ -167,11 +167,11 @@ function makeLairDefense(opt){
  G.fire=function(p,sp,x,y){const S=LD_SPECIALS.find(s=>s.id===sp);if(!S)return;if((G.cd[sp]||0)>0){fl(x,y,'Recharging','#9ab');SFX.hurt();return;}
   if(sp==='butt'){if(G.butt){fl(x,y,'Already flying!','#ff8a1a');return;}if(!G.foes.some(e=>!e.dead&&e.fall<=0)){fl(G.perch.x,G.perch.y-30,'No goons to smash!','#ffb');return;}}
   G.cd[sp]=S.cd*(1-.15*fort.fridge);const N=night?night.n:Math.min(10,1+G.wave/4);
-  if(sp==='rain'){for(let i=0;i<14;i++)G.fx.push({k:'pizza',x:x+(Math.random()-.5)*150,y:y+(Math.random()-.5)*110,t:-i*.06});
+  if(sp==='rain'){G.fx.push({k:'sfx',row:0,x,y,t:-.2,sc:.9});for(let i=0;i<14;i++)G.fx.push({k:'pizza',x:x+(Math.random()-.5)*150,y:y+(Math.random()-.5)*110,t:-i*.06});
    setTimeout(()=>{for(const e of G.foes)if(!e.dead&&Math.hypot(e.x-x,e.y-y)<95)hurt(e,22+7*N,p,{special:1});G.shake=.25;},380);}
-  if(sp==='emp'){G.fx.push({k:'ring',x:G.end.x,y:G.end.y,t:0,r:700,col:'#2de2f5',big:1});for(const e of G.foes){if(e.dead)continue;e.stun=Math.max(e.stun,e.F.boss?.8:2.6);if(e.F.machine)hurt(e,30+8*N,p,{special:1});}SFX.gadget();}
-  if(sp==='ice'){G.fx.push({k:'ring',x,y,t:0,r:140,col:'#bff',big:1});for(const e of G.foes)if(!e.dead&&Math.hypot(e.x-x,e.y-y)<140)e.frz=Math.max(e.frz,e.F.boss?1.5:4);}
-  if(sp==='drop'){G.shake=.5;G.fx.push({k:'ring',x:W/2,y:H/2,t:0,r:700,col:'#b07aff',big:1});for(const e of G.foes)if(!e.dead)hurt(e,18+6*N,p,{special:1});beep(50,.5,'sine',.12,-20);}
+  if(sp==='emp'){G.fx.push({k:'sfx',row:1,x:G.end.x,y:G.end.y,t:0,sc:1.8});G.fx.push({k:'ring',x:G.end.x,y:G.end.y,t:0,r:700,col:'#2de2f5',big:1});for(const e of G.foes){if(e.dead)continue;e.stun=Math.max(e.stun,e.F.boss?.8:2.6);if(e.F.machine)hurt(e,30+8*N,p,{special:1});}SFX.gadget();}
+  if(sp==='ice'){G.fx.push({k:'sfx',row:2,x,y,t:0,sc:1.4});G.fx.push({k:'ring',x,y,t:0,r:140,col:'#bff',big:1});for(const e of G.foes)if(!e.dead&&Math.hypot(e.x-x,e.y-y)<140)e.frz=Math.max(e.frz,e.F.boss?1.5:4);}
+  if(sp==='drop'){G.fx.push({k:'sfx',row:3,x:W/2,y:H/2,t:0,sc:1.5});G.shake=.5;G.fx.push({k:'ring',x:W/2,y:H/2,t:0,r:700,col:'#b07aff',big:1});for(const e of G.foes)if(!e.dead)hurt(e,18+6*N,p,{special:1});beep(50,.5,'sine',.12,-20);}
   if(sp==='butt')G.butt=ldButtStart(G,p);
   G.used=(G.used||0)+1;};
  // ---------- update
@@ -237,7 +237,7 @@ function makeLairDefense(opt){
      if(s.pierce>0){s.hitL.push(tg);const nx=G.foes.filter(e=>!s.hitL.includes(e)&&!e.dead&&e.fall<=0&&Math.hypot(e.x-tg.x,e.y-tg.y)<60);if(nx.length){s.done=0;s.e=nx[0];s.pierce--;}}}}
    else{s.x+=dx/l*s.spd*dt;s.y+=dy/l*s.spd*dt;}}
   G.shots=G.shots.filter(s=>!s.done);
-  for(const f of G.fx)f.t+=dt;G.fx=G.fx.filter(f=>f.t<(f.k==='jet'?1.6:f.k==='ham'?1.2:.6));
+  for(const f of G.fx)f.t+=dt;G.fx=G.fx.filter(f=>f.t<(f.k==='jet'?1.6:f.k==='ham'?1.2:f.k==='sfx'?.8:.6));
   for(const f of G.floats){f.life-=dt;f.y-=22*dt;}G.floats=G.floats.filter(f=>f.life>0);
   if(G.butt)ldButtUpdate(G,dt);}
  function nearestUnit(e,R){let b=null,bd=R;for(const u of G.units){const d=Math.hypot(u.x-e.x,u.y-e.y);if(d<bd&&u.off<=0){bd=d;b=u;}}return b;}
