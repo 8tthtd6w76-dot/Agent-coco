@@ -151,7 +151,7 @@ function quickPanel(Pn){const q=qInst(),col=qColor(q);
  // play + layers
  const R=el('div','col qrcol');const pb=el('button','qplay'+(T.playing?' on':''),T.playing?'■ Stop':'▶ Play');pb.onclick=qPlay;
  R.append(pb,el('div','hint',P.loop.on?`Looping bars ${P.loop.a/4+1}–${P.loop.b/4} · ${P.bpm} BPM`:`Plays a 2–4 bar loop · ${P.bpm} BPM`));
- const lr=el('div','row');lr.append(btn('↶ Undo last layer',qUndoLayer,'Takes out the last time around the loop'),btn('Tap tempo',qTapTempo,'Tap 4 or more times at the speed you want'));R.append(lr);
+ const lr=el('div','row');lr.append(btn('↶ Undo last layer',qUndoLayer,'Takes out the last time around the loop'),btn('Tap tempo',qTapTempo,'Tap 4 or more times at the speed you want'),btn(QK.lockTempo?'🔒 Tempo locked':'🔓 Lock tempo',()=>{QK.lockTempo=!QK.lockTempo;renderPanel();},'Locked: free play and the buddy never change the tempo','qlockt'+(QK.lockTempo?' on':'')));R.append(lr);
  const cr=el('div','row');cr.append(btn('Clear drums',qClearDrums,'Removes the Jam drums from the loop'),btn('Clear '+q.n,qClearInst,'Removes this sound from the loop'));R.append(cr);
  R.append(btn('Repeat through whole song',qRepeatAll,'Stretches your Jam layers so they play from the start to the end of the song'));
  const live=el('div','qlive');P.tracks.filter(t=>t.quick).forEach(t=>{if(t.type==='drums'){const ps=new Set();t.clips.forEach(c=>c.notes.forEach(n=>ps.add(n.p)));ps.forEach(p=>{const d=el('span','',esc(t.pads[p].name||PAD_NAMES[p]));d.style.setProperty('--c',PAD_COLORS[p]);d.dataset.tr=t.id;d.dataset.p=p;live.appendChild(d);});}
@@ -215,7 +215,10 @@ function qFreeFinish(){const F=QK.free;QK.free=null;if(!F)return;const taps=F.ta
  let beat=gaps.length?gaps[Math.floor(gaps.length/2)]:.5;while(beat<.4)beat*=2;while(beat>.86)beat/=2;
  const empty=!P.tracks.some(t=>t.clips.some(c=>t.type==='audio'?c.src:c.notes.length));
  let bpm=Math.round(60/beat);
- if(empty){setBpm(bpm,false);}else{beat=60/P.bpm;bpm=P.bpm;}   // a song that already has music keeps its tempo: your take is fitted to it
+ // only trust a new tempo when the hits were steady and it's clearly different; otherwise keep the song's tempo (and never with 🔒 Lock tempo)
+ const cvg=gaps.length>2?Math.sqrt(gaps.reduce((a,g)=>a+Math.pow(g/((gaps[gaps.length>>1])||1)-Math.round(g/((gaps[gaps.length>>1])||1)),2),0)/gaps.length):1;
+ const steady=taps.length>=4&&cvg<.18,close=Math.abs(bpm-P.bpm)/P.bpm<.12;
+ if(empty&&!QK.lockTempo&&steady&&(!QK.freeBpmSet||!close)){setBpm(bpm,false);QK.freeBpmSet=true;}else{beat=60/P.bpm;bpm=P.bpm;}   // a song that already has music keeps its tempo: your take is fitted to it
  const snap=QK.snap||2,pos=taps.map(x=>Math.round((x.t-t0)/beat*snap)/snap);
  const lenB=Math.max(...pos)+1,bars=lenB<=4?1:lenB<=8?2:lenB<=16?4:8,L=bars*4;
  commit();const names=[...new Set(taps.map(x=>x.q.n))];QK.layers.push({snap:HIST.u[HIST.u.length-1],name:names.join(' + ')});

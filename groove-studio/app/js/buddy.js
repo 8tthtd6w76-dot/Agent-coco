@@ -15,7 +15,7 @@ const bKind={kick:'drum',snare:'drum',clap:'drum',hat:'drum',ohat:'drum',perc:'d
 function buddyHearTap(q,m,b,v){if(!BUDDY.on)return;BUDDY.userHits++;if(q.kind==='keys')BUDDY.heard.push({m,b,v,d:.5,src:'keys',at:performance.now()});if(BUDDY.heard.length>40)BUDDY.heard.shift();}
 // sung / played notes on the mic: a small pitch tracker (autocorrelation), a note = a pitch that holds for ~90 ms
 let BPBUF=null;
-function buddyPitch(){if(!BUDDY.on||!GUIDE.an||!MIC||!T.playing)return;const an=GUIDE.an;if(!BPBUF)BPBUF=new Float32Array(2048);an.getFloatTimeDomainData(BPBUF);
+function buddyPitch(){if(!BUDDY.on||!GUIDE.phones||!GUIDE.an||!MIC||!T.playing)return;const an=GUIDE.an;if(!BPBUF)BPBUF=new Float32Array(2048);an.getFloatTimeDomainData(BPBUF);
  const x=BPBUF,N=1024,sr=AC.sampleRate;let rms=0;for(let i=0;i<N;i++)rms+=x[i]*x[i];rms=Math.sqrt(rms/N);
  const P_=BUDDY.pitch;let m=-1;
  if(rms>.015){const maxL=Math.ceil(sr/70),minL=Math.floor(sr/1000),d=new Float32Array(maxL+2);let run=0,bl=0;   // YIN: the first dip of the normalized difference
@@ -93,7 +93,7 @@ function buddyStep(){const M=BMODES[BUDDY.mode],E=BUDDY.energy;BUDDY.pass++;
  if(keysNow.length>=3){BUDDY.newRiff=true;bWrite('lead');BUDDY.lastCover=BUDDY.pass;if(!BUDDY.added.includes('lead'))BUDDY.added.push('lead');bSay(`Answering your riff: a ${BUDDY.motif.notes.length}-note cover on its ${FM_PRESETS[bTrack('lead').patch.p].n} synth`);QK.needPanel=true;return;}
  if(busy&&BUDDY.mode!=='chaos'){bSay('Listening to you… it answers when you leave a gap.');return;}
  // a melody from the music in the room: now and then it picks up the line and covers it
- if(BUDDY.added.includes('lead')&&micNow.length>=4&&BUDDY.pass-(BUDDY.lastCover||0)>=every*3){BUDDY.newRiff=true;bWrite('lead');BUDDY.lastCover=BUDDY.pass;bSay('Picked up a line from the music and made a cover of it');return;}
+ if(GUIDE.phones&&BUDDY.added.includes('lead')&&micNow.length>=4&&BUDDY.pass-(BUDDY.lastCover||0)>=every*3){BUDDY.newRiff=true;bWrite('lead');BUDDY.lastCover=BUDDY.pass;bSay('Picked up a line from the music and made a cover of it');return;}
  const songMoved=bSongStep();
  if(BUDDY.mode==='chaos'&&BUDDY.added.length){const k=bPick(BUDDY.added);bWrite(k);if(bR()<.3)BUDDY.chaosProg=null;}
  if(songMoved&&BUDDY.mode!=='chaos')return;
@@ -113,7 +113,7 @@ async function buddyStart(){await ensureAudio();BUDDY.on=true;BUDDY.show=true;BU
  BUDDY.added=[...new Set(P.tracks.filter(t=>(t.quick||'').startsWith('buddy')).flatMap(t=>t.type==='drums'?[]:[t.quick.slice(6)]))];
  if(!GUIDE.on)await guideOn().catch(()=>{});
  const M=BMODES[BUDDY.mode],empty=!P.tracks.some(t=>t.clips.some(c=>t.type==='audio'?c.src:c.notes.length));
- if(!T.playing){if(empty){const heardT=GUIDE.on&&GUIDE.bpmConf>.35?Math.round(GUIDE.bpm):0;setBpm(heardT||Math.round(M.bpm[0]+bR()*(M.bpm[1]-M.bpm[0])),true);
+ if(!T.playing){if(empty){const heardT=GUIDE.on&&GUIDE.bpmConf>.35?Math.round(GUIDE.bpm):0;if(!QK.lockTempo)setBpm(heardT||Math.round(M.bpm[0]+bR()*(M.bpm[1]-M.bpm[0])),true);
    if(GUIDE.on&&GUIDE.keyConf>.4){P.key=GUIDE.key;P.scale=GUIDE.minor?1:0;}P.loop={on:true,a:0,b:8};}
   qEnsureLoop();const first=M.order.find(k=>!songHas(k));if(first&&!BUDDY.added.includes(first)){bWrite(first);BUDDY.added.push(first);}
   if(GUIDE.on&&GUIDE.bpmConf>.35)await guideSync();else await play(P.loop.a);}

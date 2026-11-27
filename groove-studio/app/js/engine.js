@@ -62,7 +62,7 @@ function tick(){if(!T.playing)return;const sp=spb(),Lnow=(AC.currentTime-T.t0)/s
    sch(MIX,p.s0,p.s1,x=>T.t0+(p.l0+x-p.s0)*sp,p.jump,lp);}T.L=Lto;}}
 function headNow(){if(!T.playing)return T.head;return songAt((AC.currentTime-T.t0)/spb());}
 async function play(from,at){await ensureAudio();if(T.playing)stop(true);updateMix();
- T.b0=from==null?T.head:from;T.t0=at&&at>AC.currentTime+.03?at:AC.currentTime+.06;T.L=0;T.playing=true;T.srcs=[];tick();T.timer=setInterval(tick,25);emit('play');}
+ T.b0=from==null?T.head:from;T.t0=at&&at>AC.currentTime+.03?at:AC.currentTime+.06;T.L=0;T.playing=true;T.lockKey=(T.lockKey||0)+1;T.srcs=[];tick();T.timer=setInterval(tick,25);emit('play');}
 function stop(keep){if(!T.playing)return;const h=headNow();T.playing=false;clearInterval(T.timer);
  T.srcs.forEach(s=>{try{s.stop();}catch(e){}});T.srcs=[];VIS.length=0;
  // cut ringing synth notes / drum tails by ducking each strip briefly

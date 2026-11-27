@@ -41,7 +41,10 @@ function initTop(){NOTE_NAMES.forEach((n,i)=>{const o=el('option','',n);o.value=
  $('#bUndo').onclick=doUndo;$('#bRedo').onclick=doRedo;$('#bFile').onclick=e=>{const r=e.target.getBoundingClientRect();fileMenu(r.left,r.bottom+4);};
  $('#zIn').onclick=()=>zoom(1.25);$('#zOut').onclick=()=>zoom(.8);
  document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{commit();const t=newTrack(b.dataset.add);if(t.type==='audio')P.tracks.forEach(x=>{if(x.type==='audio')x.arm=false;});P.tracks.push(t);updateMix();select(t.id,null);});}
-function setBpm(v,noCommit){v=Math.max(40,Math.min(240,Math.round(v)||100));if(!noCommit&&v!==P.bpm)commit();const was=T.playing&&!T.rec;if(was)stop(true);P.bpm=v;updateMix();syncTop();renderTimeline();if(was)play(T.head);}
+// tempo changes while playing keep going smoothly: the clock is re-anchored at the current beat instead of restarting playback
+function setBpm(v,noCommit){v=Math.max(40,Math.min(240,Math.round(v)||100));if(v===P.bpm){syncTop();return;}if(!noCommit)commit();
+ if(T.playing&&!T.rec&&AC){const now=AC.currentTime,L=(now-T.t0)/spb();P.bpm=v;T.t0=now-L*spb();T.lockKey=(T.lockKey||0)+1;}else P.bpm=v;
+ updateMix();syncTop();renderTimeline();}
 function zoom(f){const W=$('#lanesWrap'),h=T.head;UI.ppb=Math.max(4,Math.min(120,UI.ppb*f));renderTimeline();W.scrollLeft=Math.max(0,h*UI.ppb-W.clientWidth/3);}
 async function togglePlay(){if(T.playing){stop();}else await play();syncTop();}
 function recordButton(){if(T.rec){stop();syncTop();return;}let tr=selTrack();
