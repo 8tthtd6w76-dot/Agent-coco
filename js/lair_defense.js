@@ -5,7 +5,7 @@
 // Mouse/touch: click a pad = build menu for P1, click menu rows, click the special buttons along the bottom, click "Next wave".
 // Art: every unit/goon has a code drawing; ldArt hooks use assets/ld/*.png strips (LD_ART) when they exist.
 const LD_HUD=40,LD_BAR=444;
-['crab','karate_red','karate_pink','brute','runner','agents','fx','heads','bases_a','bases_b','snake','scorpion','spider'].forEach(n=>ASSET_LIST.push(['ld/'+n,'assets/ld/'+n+'.png']));
+Object.keys(typeof LD_ART!=='undefined'?LD_ART:{}).forEach(n=>ASSET_LIST.push(['ld/'+n,'assets/ld/'+n+'.png']));
 ['alley','roof','lair'].forEach(n=>ASSET_LIST.push(['ld/map_'+n,'assets/ld/map_'+n+'.jpg']));
 // centred frame (turret heads, shots, FX); rot turns it around its middle
 function ldStripC(n,f,x,y,s,rot,alpha){const im=IMG['ld/'+n],A=typeof LD_ART!=='undefined'&&LD_ART[n];if(!im||!im.width||!A)return false;

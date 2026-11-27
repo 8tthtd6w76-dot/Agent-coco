@@ -24,6 +24,7 @@ function ldBgCanvas(G){const M=G.map;if(LD_BG[M.id])return LD_BG[M.id];const c=d
  for(const P of G.paths){const [sx,sy]=P.pts[0];x.fillStyle='#6a2a8a';x.beginPath();x.arc(Math.max(14,Math.min(W-14,sx)),Math.max(LD_HUD+12,Math.min(H-40,sy)),12,0,7);x.fill();x.strokeStyle='#ffd23a';x.lineWidth=2;x.stroke();}
  LD_BG[M.id]=c;return c;}
 function ldDrawEnd(G){const e=G.end,t=G.map.end;const painted=G.map.img&&IMG[G.map.img]&&IMG[G.map.img].width;
+ if(ldDrawFortArt(G))return;
  if(painted){if(t==='core'){const g=.6+.4*Math.sin(G.t*3);ctx.fillStyle=`rgba(45,226,245,${.3*g})`;ctx.beginPath();ctx.arc(e.x+5,e.y-10,22,0,7);ctx.fill();ctx.fillStyle='#bff';ctx.strokeStyle='#000';ctx.lineWidth=2;ctx.beginPath();ctx.arc(e.x+5,e.y-12,10,0,7);ctx.fill();ctx.stroke();
    if(G.shield>0){ctx.strokeStyle='rgba(127,255,255,.8)';ctx.beginPath();ctx.arc(e.x+5,e.y-10,26,0,7);ctx.stroke();}}
   else if(G.shield>0){ctx.strokeStyle='rgba(127,255,255,.7)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(e.x,e.y-10,20,0,7);ctx.stroke();}
@@ -36,7 +37,29 @@ function ldDrawEnd(G){const e=G.end,t=G.map.end;const painted=G.map.img&&IMG[G.m
  if(G.shield>0){ctx.strokeStyle='rgba(127,255,255,.8)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,cy-12,22,0,7);ctx.stroke();}
  // Coco's perch (Butt Bomb launch spot)
  if(ldUnlocked(LD_SPECIALS[4])&&!G.butt){const p=G.perch;rrect(p.x-12,p.y-4,24,10,3,'#7a5a3a','#000',1.5);if(SHEETS.agent_coco)drawSprite('agent_coco','idle_1',p.x,p.y-2,p.x>W/2,1,.32);}}
-// ---------- goons (code art + Michael's sheets)
+// Michael's fortress + core sheets: core (damage states by Lair health, shield bubble by Core Shield level), door, walls, skylight, lookout tower.
+function ldCoreFrame(G){const f=G.hp/G.hpMax;if(G.shield>0)return 8+Math.max(1,Math.min(3,G.fort.shield||1));
+ if(G.hit>0&&Math.sin(G.t*40)>0)return 5;return f>.75?Math.floor(G.t*3)%4:f>.5?5:f>.25?6:7;}
+function ldDrawFortArt(G){if(!(G.map.img&&IMG[G.map.img]&&IMG[G.map.img].width&&IMG['ld/core']&&IMG['ld/core'].width&&IMG['ld/fortress']&&IMG['ld/fortress'].width))return false;
+ const e=G.end,t=G.map.end,F=G.fort,P=G.paths[0],side=e.x>W/2?-1:1;
+ if(G.map.skylight){const sp=G.paths[1].pts[0],lv=F.shutter||0;ldStrip('fortress',lv>=3?8:lv>=1?7:6,sp[0],sp[1]+10,.34);}
+ if(F.lookout){const p=G.perch;ldStrip('fortress',8+F.lookout,p.x+(p.x>W/2?-34:34),p.y+18,.42);}
+ if(F.walls){const [wx,wy]=ldAt(P,P.len-58);ldStrip('fortress',2+F.walls,wx,wy+16,.3);}
+ const cx=t==='core'?e.x+5:e.x+side*34,cy=t==='core'?e.y+14:e.y+10;
+ if(F.door&&t!=='core')ldStrip('fortress',F.door-1,e.x,e.y+12,.34);
+ ldStrip('core',ldCoreFrame(G),cx,cy,t==='core'?.42:.32);
+ if(ldUnlocked(LD_SPECIALS[4])&&!G.butt){const p=G.perch;if(SHEETS.agent_coco)drawSprite('agent_coco','idle_1',p.x,p.y,p.x>W/2,1,.32);}
+ return true;}
+// Workshop row pictures (false = keep the coloured dot)
+function ldRowArt(r,x,y){const L=r.lvl||0;
+ if(r.F){const id=r.F.id,m={door:0,walls:3,shutter:6,lookout:9}[id];if(m!=null)return ldStrip('fortress',m+Math.max(0,L-1),x,y+15,.25);
+  if(id==='shield')return ldStrip('core',L?8+L:0,x,y+15,.25);if(id==='repair'||id==='plating')return ldStrip('core',0,x,y+15,.25);return false;}
+ if(r.U){const TA=LD_TOWER_ART[r.U.id];if(TA)return ldStrip(TA[0],TA[1],x,y+16,.26);
+  const AG={coco:0,sisi:4,sandy:8,barro:12}[r.U.id];if(AG!=null)return ldStrip('agents',AG,x,y+16,.26);
+  if(r.U.id==='hover'||r.U.id==='swarm')return ldStripC('heads',12,x,y,.3);}
+ return false;}
+// 4-direction sheets: foe art -> [strip, scale, only first 2 columns]
+const LD_DIR4={brute:['brute',.32],meatball:['runner',.27],chute:['runner',.27],cart:['cart',.34],lefty:['lefty',.27],flyer:['hoverboard',.3],sneak:['hoodie',.28,1],techie:['dronepack',.29],baldey:['baldey',.36]};
 function ldDrawFoe(G,e){const F=e.F,x=e.x,y=e.y-(e.air?22:0),fl=Math.cos(e.a)<0,wk=Math.floor(e.t*8)%4,s=F.boss?1.8:F.big?1.25:1;
  if(e.fall>0){const k=e.fall;const yy=y-k*90;ctx.strokeStyle='#fff';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x-12,yy-22);ctx.lineTo(x,yy);ctx.lineTo(x+12,yy-22);ctx.stroke();ctx.fillStyle='#ff5ae0';ctx.beginPath();ctx.arc(x,yy-26,15,Math.PI,0);ctx.fill();ctx.strokeStyle='#000';ctx.stroke();
   if(!(typeof abqDraw==='function'&&abqDraw('stooge_meatball',16,x,yy+12,.18)))ldThug(x,yy,'#6a3a9a',fl,0,1);return;}
@@ -45,11 +68,11 @@ function ldDrawFoe(G,e){const F=e.F,x=e.x,y=e.y-(e.air?22:0),fl=Math.cos(e.a)<0,
  if(e.frz>0){ctx.filter='hue-rotate(160deg) brightness(1.3)';}
  const A=F.art;let done=false;
  if(e.dead&&!e.reached){const k=Math.min(3,Math.floor(e.deadT*6));
-  if(A==='brute'||A==='meatball'){done=ldStrip(A==='brute'?'brute':'runner',12+k,x,y+2,.3*s,fl);}
+  if(LD_DIR4[A]&&A!=='chute'){const D=LD_DIR4[A];done=ldStrip(D[0],12+k,x,y+2,D[1]*s,fl);}
   else if(A==='snake'||A==='scorpion'||A==='spider')done=ldStrip(A,8+k,x,y+2,.3,A==='spider'?false:!fl);
   else if(A==='crab')done=ldStrip('crab',9+Math.min(2,k),x,y+2,.34,fl);
   if(done){ctx.filter='none';ctx.restore();return;}ctx.globalAlpha*=Math.max(0,1-e.deadT*1.8);}
- if(A==='brute'||A==='meatball'||A==='chute'&&!e.fall){const [r0,fp]=ldDir(e.a);done=ldStrip(A==='brute'?'brute':'runner',r0+wk,x,y+2,(A==='brute'?.32:.27)*s,fp);}
+ if(LD_DIR4[A]){const D=LD_DIR4[A],[r0,fp]=ldDir(e.a);done=ldStrip(D[0],r0+(D[2]?wk%2:wk)+(e.hit>0&&F.boss?0:0),x,y+2,D[1]*s,fp);}
  if(!done&&(A==='snake'||A==='scorpion'||A==='spider'))done=ldStrip(A,(e.stun>0||e.fz?4:0)+wk,x,y+2,.3,A==='spider'?false:!fl);
  if(done){}
  else if(A==='crab')done=ldStrip('crab',e.stun>0||e.fz?8:(e.hit>0?4+wk:wk),x,y+2,.34*s,fl);

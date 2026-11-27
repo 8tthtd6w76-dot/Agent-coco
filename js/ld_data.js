@@ -86,6 +86,7 @@ const LD_FOES={
  crab:    {n:'Pinchy Crab',  hp:8,  spd:44, cash:4, dmg:1,threat:.8, art:'crab',pack:2,armor:1},
  redbelt: {n:'Red Belt',     hp:18, spd:42, cash:9, dmg:1,threat:2,  art:'karate_red',guard:1},
  pinkbelt:{n:'Pink Belt',    hp:14, spd:58, cash:9, dmg:1,threat:2,  art:'karate_pink',guard:1},
+ cart:    {n:'Cart Bruiser', hp:34, spd:28, cash:12,dmg:2,threat:3.2,art:'cart',armor:2,big:1},
  spider:  {n:'Desert Spider',hp:7,  spd:60, cash:4, dmg:1,threat:.8, art:'spider',pack:3},
  // bosses
  lefty:   {n:'Lefty',        hp:320,spd:20, cash:80, dmg:10,threat:0,art:'lefty',boss:1,net:1,big:1},
@@ -108,19 +109,19 @@ const LD_MAPS=[
 const LD_NIGHTS=[
  {n:1, map:0,name:'First Knock',     waves:8, pool:{walker:5,runner:2},                       twist:'',intro:'Baldey\'s crew found the alley behind Barro\'s. Build towers on the round pads!'},
  {n:2, map:0,name:'Desert Critters', waves:9, pool:{scorpion:4,snake:3,crab:3,spider:3,walker:1,runner:1},      twist:'swarm',intro:'Somebody dumped a crate of scorpions, rattlers, spiders and pinchy crabs in the alley. They come in packs!'},
- {n:3, map:0,name:'Sky Drop',        waves:10,pool:{chute:4,thrower:2,walker:2,balloon:1},      twist:'',intro:'Parachuters drop in anywhere on the path, and balloon goons float over the roofs.'},
+ {n:3, map:0,name:'Sky Drop',        waves:10,pool:{chute:4,thrower:2,walker:2,balloon:1,cart:1},      twist:'',intro:'Parachuters drop in anywhere on the path, and balloon goons float over the roofs.'},
  {n:4, map:1,name:'Lefty\'s Net',    waves:10,pool:{techie:2,sneak:2,walker:2,redbelt:2,pinkbelt:2,thrower:1},boss:'lefty',twist:'',intro:'On the roof now. Techies hack towers, Sneaks go see-through and the Belts block every third hit. Lefty brings his big net.'},
  {n:5, map:1,name:'Block Party',     waves:10,pool:{blockhead:5,fizzer:2,runner:1},             twist:'horde',intro:'A box-headed horde shuffles up the fire escape. Watch out for Fizzers: they pop and jam towers!'},
  {n:6, map:1,name:'Balloon Fiesta',  waves:11,pool:{balloon:2,flyer:3,chute:3,gdrone:2,jet:1},  boss:'baron',twist:'sky',intro:'Baron Blowhard followed you home from Albuquerque. Almost everything flies tonight!'},
- {n:7, map:1,name:'Knuckle Up',      waves:11,pool:{brute:3,robo:2,gtank:1,redbelt:2,pinkbelt:1,thrower:2}, boss:'knuckles',twist:'',intro:'Heavy armor night: brutes, robots and a goon tank. Knuckles slams the roof and stuns towers.'},
+ {n:7, map:1,name:'Knuckle Up',      waves:11,pool:{brute:3,cart:2,robo:2,gtank:1,redbelt:2,pinkbelt:1,thrower:2}, boss:'knuckles',twist:'',intro:'Heavy armor night: brutes, robots and a goon tank. Knuckles slams the roof and stuns towers.'},
  {n:8, map:2,name:'Lights Out',      waves:11,pool:{gloom:3,sneak:3,fizzer:2,blockhead:2,spider:2},      twist:'dark',intro:'They cut the power in the Lair! Towers see less in the dark. Shadow Coats blink forward when hit, and spiders skitter in the dark.'},
  {n:9, map:2,name:'Machine Mayhem',  waves:12,pool:{gdrone:3,jet:2,robo:2,gtank:1,techie:2,minibot:2},twist:'',intro:'Baldey sends the machines: drones, jets, robots and tanks, through the door AND the skylight.'},
- {n:10,map:2,name:'Bigg Buff Baldey',waves:12,pool:{walker:2,runner:2,brute:2,robo:1,gloom:1,fizzer:1,balloon:1,jet:1,scorpion:2,snake:1,chute:2,crab:2,redbelt:1,pinkbelt:1},boss:'baldey',twist:'',intro:'This is it. Bigg Buff Baldey himself, with every goon he has. Protect Sandy\'s core!'}];
+ {n:10,map:2,name:'Bigg Buff Baldey',waves:12,pool:{walker:2,runner:2,brute:2,cart:1,robo:1,gloom:1,fizzer:1,balloon:1,jet:1,scorpion:2,snake:1,chute:2,crab:2,redbelt:1,pinkbelt:1},boss:'baldey',twist:'',intro:'This is it. Bigg Buff Baldey himself, with every goon he has. Protect Sandy\'s core!'}];
 const LD_NIGHT_CODES={2:'ALLEYCAT',3:'SKYDROP',4:'ROOFRAID',5:'BLOCKPARTY',6:'HOTAIRBALL',7:'KNUCKLEUP',8:'LIGHTSOUT',9:'MACHINES',10:'BALDEYBASH'};
 // endless: every 10 waves a boss in this order
 const LD_ENDLESS_BOSSES=['lefty','baron','knuckles','baldey'];
 const LD_ENDLESS_POOL=[{walker:4,runner:2,scorpion:2,snake:2,crab:2,spider:2},{chute:2,thrower:2,blockhead:2,fizzer:1,redbelt:1,pinkbelt:1},{techie:2,sneak:2,flyer:2,balloon:1},
- {brute:2,robo:1,gdrone:2,gloom:1},{jet:1,gtank:1,robo:1,gloom:2,fizzer:2}];
+ {brute:2,cart:1,robo:1,gdrone:2,gloom:1},{jet:1,gtank:1,robo:1,gloom:2,fizzer:2}];
 
 // ---------- save helpers
 function ldSave(){SAVE.ld=SAVE.ld||{};const L=SAVE.ld;for(const k of ['stars','best','endless','estars','unlock','res','fort'])L[k]=L[k]||{};L.spent=L.spent||0;return L;}

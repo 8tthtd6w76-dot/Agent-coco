@@ -85,7 +85,7 @@ const LDShop={name:'ldshop',make(){this.tab=0;this.sel=0;this.scroll=0;this.msg=
    MUI.add(x,56,134,28,{click:()=>{this.tab=i;this.sel=0;this.scroll=0;SFX.move();}});});
   const R=this.rows();panel(24,92,360,330);
   R.slice(this.scroll,this.scroll+7).forEach((r,k)=>{const i=k+this.scroll,y=100+k*45,s=i===this.sel;rrect(32,y,344,40,9,s?'rgba(255,210,58,.95)':'rgba(255,255,255,.05)',null);
-   ctx.fillStyle=r.col;ctx.beginPath();ctx.arc(52,y+20,11,0,7);ctx.fill();ctx.strokeStyle='#000';ctx.lineWidth=2;ctx.stroke();
+   if(!(typeof ldRowArt==='function'&&ldRowArt(r,52,y+20))){ctx.fillStyle=r.col;ctx.beginPath();ctx.arc(52,y+20,11,0,7);ctx.fill();ctx.strokeStyle='#000';ctx.lineWidth=2;ctx.stroke();}
    text(r.n,72,y+17,14,s?'#102':r.lock?'#99a':'#fff','left',null);
    const sub=r.F?'Level '+r.lvl+' / 3':r.lock?'LOCKED  •  '+r.star+' ★':(r.U?'Research '+r.res+' / 3':'Unlocked');text(sub,72,y+33,10,s?'#3a2a10':r.lock?'#ffb36a':'#9cf','left',null);
    if(r.F){for(let q=0;q<3;q++){rrect(320+q*16,y+14,12,12,3,q<r.lvl?'#3aff8a':'#223','#000',1);}}
