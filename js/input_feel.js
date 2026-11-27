@@ -5,7 +5,7 @@
 //    first thing on the next screen.
 // 4) Prompts follow the last thing you touched: "A: buy" reads "Space: buy" on the keyboard, A/B/X/Y on a pad or touch.
 // Engine side (engine.js): quick key taps between two frames are never lost (KTAP), stick hysteresis, AXES[], LAST_DEV.
-const MENU_SCENES=['title','map','watch','extras','lairmenu','shop','lab','equip','craft','trophies','eggshelf','dpick','charselect','results','dresults','story'];
+const MENU_SCENES=['title','map','watch','extras','lairmenu','shop','lab','equip','craft','trophies','eggshelf','dpick','charselect','results','dresults','story','ldmenu','ldshop'];
 const STICK_MENU_SCENES=MENU_SCENES.concat(['code','musicroom','songlist','jukebox','themepicker','groove','studio']);
 const FEEL_REP={delay:.36,rate:.085,mapRate:.16},FEEL_LOCK=.14;
 const _feelHold=[{},{}];let _feelScene=null,_feelLock=0,_feelLast=0;

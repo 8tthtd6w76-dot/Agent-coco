@@ -35,7 +35,7 @@ MH.story=null;  // story.js already handles taps on story pages
 
 // ---------- title ----------
 MH.title=function(s){if(s.controls){mAnyOk();return;}
- s.items.forEach((_,i)=>MUI.add(405,212+i*46,210,38,{hover:()=>{if(s.sel!==i){s.sel=i;SFX.move();}},click:()=>{s.sel=i;MUI.btn('ok');}}));};
+ s.items.forEach((_,i)=>MUI.add(405,196+i*41,210,35,{hover:()=>{if(s.sel!==i){s.sel=i;SFX.move();}},click:()=>{s.sel=i;MUI.btn('ok');}}));};
 
 // ---------- character select (charselect.js handles the click; these boxes give the hover + pointer) ----------
 MH.charselect=function(s){if(s.go)return;for(let i=0;i<3;i++)MUI.add(CS_X[i],CS_Y-16,CS_W,CS_H+16,{});MUI.add(W/2-80,370,160,42,{});

@@ -42,20 +42,20 @@ function sandyBox(lines,expr='happy',idx=0){
  wrap(lines[idx],150,H-78,W-190,19,15,'#fff',null);
  text(idx<lines.length-1?'A: next':'A: ok',W-40,H-26,12,'#9fb',"right",null);}
 // ---------- Title ----------
-const Title={name:'title',sel:0,items:['1 PLAYER','2 PLAYER CO-OP','ENTER CODE','EXTRAS','CONTROLS'],controls:false,
+const Title={name:'title',sel:0,items:['1 PLAYER','2 PLAYER CO-OP','LAIR DEFENSE','ENTER CODE','EXTRAS','CONTROLS'],controls:false,
  enter(){startMusic('title');},
  update(){if(this.controls){if(anyPressed('ok')||anyPressed('back')||anyPressed('start')){this.controls=false;SFX.move();}return;}
   const n=this.items.length;if(anyPressed('down')){this.sel=(this.sel+1)%n;SFX.move();}if(anyPressed('up')){this.sel=(this.sel+n-1)%n;SFX.move();}
   if(anyPressed('ok')||anyPressed('start')){audio()&&AC.state==='suspended'&&AC.resume();SFX.ok();
-   if(this.sel===4)this.controls=true;else if(this.sel===2)go(CodeEntry);else if(this.sel===3)go(Extras);else{NPLAYERS=this.sel+1;go(CharSelect);}}},
+   const it=this.items[this.sel];if(it==='CONTROLS')this.controls=true;else if(it==='ENTER CODE')go(CodeEntry);else if(it==='EXTRAS')go(Extras);else if(it==='LAIR DEFENSE'){if(typeof LDMenu!=='undefined'){LD_FROM='title';go(LDMenu);}}else{NPLAYERS=this.sel+1;go(CharSelect);}}},
  draw(){img('main_menu',0,0,W,H);
   ctx.fillStyle='rgba(10,0,40,.25)';ctx.fillRect(0,0,W,120);
   const t='AGENT COCO';ctx.save();ctx.translate(W/2,78);ctx.rotate(-0.02);
   text(t,0,0,64,'#ffd23a','center','#1b0a3a');ctx.restore();
   text('A Gilbert Adventures Mission',W/2,106,16,'#2de2f5','center','#1b0a3a');
-  for(let i=0;i<this.items.length;i++){const x=405,y=212+i*46,s=i===this.sel;
-   rrect(x,y,210,38,12,s?'rgba(255,210,58,.95)':'rgba(15,10,50,.82)',s?'#fff':(i===2||i===3?'#ff5ae0':'#2de2f5'),3);
-   text(this.items[i],x+105,y+26,18,s?'#1b0a3a':'#fff','center',null);}
+  for(let i=0;i<this.items.length;i++){const x=405,y=196+i*41,s=i===this.sel,it=this.items[i];
+   rrect(x,y,210,35,12,s?'rgba(255,210,58,.95)':'rgba(15,10,50,.82)',s?'#fff':(it==='LAIR DEFENSE'?'#ff8a1a':it==='ENTER CODE'||it==='EXTRAS'?'#ff5ae0':'#2de2f5'),3);
+   text(it,x+105,y+24,17,s?'#1b0a3a':'#fff','center',null);}
   if(SAVE.testing)text('TESTING MODE',W-18,H-30,12,'#ff5ae0','right','#000');
   text('Press A / Enter. Press N to mute.',W-18,H-14,11,'#cdb','right','#000');
   if(this.controls)drawControlsPanel();}};
