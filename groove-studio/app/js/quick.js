@@ -9,6 +9,7 @@ function lightUp(ev){const col=instColor(ev.tr,ev.p);
  const hd=document.querySelector(`.th[data-id="${ev.tr}"]`);if(hd)hd.animate([{backgroundColor:col+'33'},{backgroundColor:'transparent'}],{duration:220});
  if(ev.p>=0&&UI.sel.track===ev.tr&&PANEL.tab!=='quick'){const pd=document.querySelector(`.pad[data-p="${ev.p}"]`);if(pd)pd.animate([{background:col,color:'#111'},{}],{duration:180});}
  document.querySelectorAll(`.qtile[data-tr="${ev.tr}"]`).forEach(q=>{if(+q.dataset.p===ev.p||q.dataset.p==='-1'&&ev.p<0)glow(q,col,true);});
+ document.querySelectorAll(`.slayer[data-tr="${ev.tr}"]`).forEach(q=>glow(q,col,false));
  const dot=document.querySelector(`.qlive [data-tr="${ev.tr}"][data-p="${ev.p<0?-1:ev.p}"]`);if(dot)glow(dot,col,true);
  const nl=document.querySelector(`#nowLights [data-tr="${ev.tr}"][data-p="${ev.p<0?-1:ev.p}"]`);if(nl){nl.animate([{background:col+'55',borderColor:col,color:'#fff'},{}],{duration:260});nl.firstChild.animate([{opacity:1,boxShadow:`0 0 10px 2px ${col}`},{}],{duration:260});}}
 // the Now playing strip: one light per sound in the song
@@ -162,7 +163,7 @@ function quickPanel(Pn){const q=qInst(),col=qColor(q);
 function panelTabs(){const w=el('div','tabs');
  [['track','Track tools'],['quick','⚡ Jam (easy)']].forEach(([k,n])=>{const b=el('button',PANEL.tab===k?'on':'',n);b.onclick=()=>{if(k!=='quick')qFinishLayer();PANEL.tab=k;$('#bJam').classList.toggle('on',k==='quick');renderPanel();};w.appendChild(b);});return w;}
 // keyboard while Jam is open: 1-0 drums, A..' and W E T Y U O P the mini keyboard, Z/X octave, ? help
-addEventListener('keydown',e=>{if(PANEL.tab!=='quick'||e.metaKey||e.ctrlKey||e.altKey)return;if(e.target.closest&&e.target.closest('input[type=text],input[type=number],#songName,select'))return;
+addEventListener('keydown',e=>{if(document.body.classList.contains('simple')||PANEL.tab!=='quick'||e.metaKey||e.ctrlKey||e.altKey)return;if(e.target.closest&&e.target.closest('input[type=text],input[type=number],#songName,select'))return;
  const k=e.key.toLowerCase();
  if(k==='?'){e.preventDefault();e.stopImmediatePropagation();QK.help=!QK.help;renderPanel();return;}
  const di='1234567890'.indexOf(k),piano=Object.prototype.hasOwnProperty.call(QPIANO,k);
@@ -179,6 +180,7 @@ function quickTick(){
  if(T.playing&&loopOn()){const h=headNow();if(QK.lastH!=null&&h<QK.lastH-.5&&QK.armedSnap&&!Object.keys(QK.held).length)qFinishLayer();QK.lastH=h;}else{QK.lastH=null;if(!T.playing&&QK.armedSnap)qFinishLayer();}
  if(GUIDE.on)guideFrame();
  buddyTick();
+ if(typeof simpleFrame==='function')simpleFrame();
  if(!QK.dirtyDraw&&!QK.needPanel)return;const now=performance.now();if(now-(QK.lastDraw||0)<150)return;QK.lastDraw=now;
  if(QK.dirtyDraw){QK.dirtyDraw=false;renderTimeline();}if(QK.needPanel&&PANEL.tab==='quick'&&!document.querySelector('.qpanel-busy')){QK.needPanel=false;renderPanel();}else QK.needPanel=false;}
 function qRepeatAll(){qFinishLayer();const end=Math.max(songEnd(),P.loop.b);let n=0;commit();

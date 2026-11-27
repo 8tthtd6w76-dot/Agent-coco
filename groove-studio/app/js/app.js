@@ -53,7 +53,7 @@ function recordButton(){if(T.rec){stop();syncTop();return;}let tr=selTrack();
  select(tr.id,UI.sel.clip);startRecord(tr).then(()=>{syncTop();renderTimeline();renderPanel();});}
 function doUndo(){if(undo()){if(T.rec)return;refreshAll();toast('Undo');}}
 function doRedo(){if(redo()){refreshAll();toast('Redo');}}
-T.listeners.push(e=>{syncTop();if(e==='edit'||e==='stop'){renderTimeline();if(e==='edit'&&EDIT)EDIT.draw();else renderPanel();}if(e==='rec'){renderTimeline();renderPanel();}});
+T.listeners.push(e=>{syncTop();if(e==='play'&&document.body.classList.contains('simple'))renderSimple();if(e==='edit'||e==='stop'){renderTimeline();if(e==='edit'&&EDIT)EDIT.draw();else renderPanel();}if(e==='rec'){renderTimeline();renderPanel();}});
 
 // ---------- file menu ----------
 function fileMenu(x,y){menu(x,y,[

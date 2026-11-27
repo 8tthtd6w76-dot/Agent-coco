@@ -16,7 +16,7 @@ function slider(label,min,max,step,get,set,fmt){const w=el('label','knob');const
 function btn(txt,fn,title,cls){const b=el('button',cls||'',txt);b.onclick=fn;if(title)b.title=title;return b;}
 function sel(opts,val,fn,title){const s=el('select');opts.forEach((o,i)=>{const op=el('option','',esc(o));op.value=i;s.appendChild(op);});s.value=val;s.onchange=()=>fn(+s.value);if(title)s.title=title;return s;}
 
-function renderPanel(){const Pn=$('#panel');Pn.innerHTML='';EDIT=null;const tr=selTrack();
+function renderPanel(){if(document.body.classList.contains('simple')&&typeof renderSimple==='function'){renderSimple();return;}const Pn=$('#panel');Pn.innerHTML='';EDIT=null;const tr=selTrack();
  if(PANEL.tab==='quick'){quickPanel(Pn);return;}
  if(!tr){const h0=el('div','ph');h0.append(panelTabs(),el('div','tt','Pick a track'));Pn.appendChild(h0);const b=el('div','pb');b.appendChild(el('div','empty','<div>Click a track on the left to open its tool here.</div><div class="hint">Voice = record and loop · Beat = pads and steps · Synth = FM-1 and piano roll</div>'));Pn.appendChild(b);return;}
  const h=el('div','ph');h.style.setProperty('--c',tr.color);h.innerHTML=`<div class="tt"><i></i>${esc(tr.name)}<span class="hint">${({audio:'Voice recorder',drums:'Beat pads',synth:'FM-1 synth'})[tr.type]}</span></div>`;
