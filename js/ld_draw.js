@@ -59,7 +59,7 @@ function ldRowArt(r,x,y){const L=r.lvl||0;
  if(r.F){const id=r.F.id,m={door:0,walls:3,shutter:6,lookout:9}[id];if(m!=null)return ldStrip('fortress',m+Math.max(0,L-1),x,y+15,.25);
   if(id==='shield')return ldStrip('core',L?8+L:0,x,y+15,.25);if(LD_FORT_ICON[id]!=null)return ldIcon(LD_FORT_ICON[id],x,y,.32);return false;}
  if(r.S){const ic=LD_SPECIAL_ICON[r.S.id];if(r.S.id==='butt')return ldStripC('bb_b',10,x,y,.22);return ic!=null&&ldStripC('sfx',ic,x,y,.2);}
- if(r.U){const TA=LD_TOWER_ART[r.U.id];if(TA)return ldStrip(TA[0],TA[1],x,y+16,.26);
+ if(r.U){if(ldUnitIcon(r.U,x,y,.32))return true;const TA=LD_TOWER_ART[r.U.id];if(TA)return ldStrip(TA[0],TA[1],x,y+16,.26);
   const AG={coco:0,sisi:4,sandy:8,barro:12}[r.U.id];if(AG!=null)return ldStrip('agents',AG,x,y+16,.26);
   if(r.U.id==='hover'||r.U.id==='swarm')return ldStripC('heads',12,x,y,.3);}
  return false;}
@@ -161,7 +161,12 @@ function ldDrawUnit(G,u){const U=u.U,x=u.x,y=u.y,K=U.kind,lv=u.lvl,off=u.off>0;
   ctx.restore();}
  ctx.restore();ldUnitPips(G,u);}
 // tower art: gun id -> [strip, column]; strip frame = level row*4 + column
-const LD_TOWER_ART={pizza:['bases_b',0],foam:['bases_b',1],bass:['bases_b',2],magnet:['bases_b',3],laser:['bases_a',0],bubble:['bases_a',2],smoke:['bases_a',3]};
+const LD_TOWER_ART={pizza:['bases_b',0],foam:['bases_b',1],bass:['bases_b',2],magnet:['bases_b',3],laser:['bases_a',0],bubble:['bases_a',2],smoke:['bases_a',3],
+ minigun:['towers_c',0],water:['towers_c',1],bow:['towers_c',2],freeze:['towers_c',3],tesla:['towers_d',0],orb:['towers_d',1],rocket:['towers_d',2],hamster:['towers_d',3]};
+// round tower icons (icons_t 0-7) and projectiles (8 gumball, 9 water spout, 10 arrow, 11 ice shard, 12 bolt, 13 beam, 14 firework, 15 tough hamster)
+const LD_GUN_ICON={minigun:0,water:1,bow:2,freeze:3,tesla:4,orb:5,rocket:6,hamster:7};
+function ldUnitIcon(U,x,y,s){const i=LD_GUN_ICON[U.id];if(i!=null)return ldStripC('icons_t',i,x,y,s*.9);const TA=LD_TOWER_ART[U.id];if(TA)return ldStrip(TA[0],TA[1],x,y+s*48,s*.8);
+ const AG={coco:0,sisi:4,sandy:8,barro:12}[U.id];if(AG!=null)return ldStrip('agents',AG,x,y+s*50,s*.8);if(U.id==='hover')return ldStripC('bots',0,x,y,s*.8);if(U.id==='swarm')return ldStripC('bots',4,x,y,s*.8);if(U.id==='robo')return ldStrip('bots',8,x,y+s*50,s*.8);return false;}
 function ldUnitPips(G,u){const x=u.x,y=u.y,lv=u.lvl,off=u.off>0;
  for(let i=0;i<lv;i++){ctx.fillStyle=lv>=5?'#ffd23a':'#7ff';ctx.fillRect(x-11+i*5,y+9,4,3);}
  if(off){text('zz',x+8,y-28,10,'#ff5ae0','left');}
@@ -172,7 +177,7 @@ function ldDrawAgent(G,u){const K=u.U.kind,x=u.x,y=u.y,t=G.t,fired=G.t-(u.fireT=
   if(ldStrip('agents',f,x,y+8+(K==='scan'?Math.sin(t*3)*2:0),.36,K==='scan'?false:fl)){
    if(K==='scan'){ctx.strokeStyle='rgba(45,226,245,.25)';ctx.lineWidth=1;ctx.beginPath();ctx.arc(x,y,ldStats(u.U,u.lvl,G).range,0,7);ctx.stroke();}return;}}
  if((K==='hover'||K==='swarm')&&ldStrip('bases_a',(u.lvl>=5?2:u.lvl>=3?1:0)*4+1,x,y+8,.34)){const wk=12+Math.floor(t*12)%4;
-  if(K==='hover'){const p=u.unit;ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.ellipse(p.x,p.y+14,9,3,0,0,7);ctx.fill();ldStripC('heads',wk,p.x,p.y,.34);return;}
+  if(K==='hover'){const p=u.unit;ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.ellipse(p.x,p.y+16,10,3,0,0,7);ctx.fill();if(!ldStripC('bots',Math.floor(t*12)%4,p.x,p.y,.3))ldStripC('heads',wk,p.x,p.y,.34);return;}
   for(const d of u.drones)ldStripC('heads',wk,d.x,d.y,.22);return;}
  if(K==='yoyo'&&SHEETS.agent_coco){drawSprite('agent_coco',u.cd>.8/ldStats(u.U,u.lvl,G).rate?'beam_3':'idle_1',x,y,Math.cos(u.ang)<0,1,.36);return;}
  if(K==='kick'&&SHEETS.agent_sisi){drawSprite('agent_sisi',u.cd>.9?'scartwheel_'+(1+Math.floor(t*10)%4):'idle_1',x,y,Math.cos(u.ang)<0,1,.34);return;}
@@ -182,6 +187,8 @@ function ldDrawAgent(G,u){const K=u.U.kind,x=u.x,y=u.y,t=G.t,fired=G.t-(u.fireT=
  rrect(x-12,y-5,24,8,3,'#3a4a5a','#000',1.5);
  if(K==='hover'){const p=u.unit;ctx.fillStyle='#bfe9ff';rrect(p.x-9,p.y-5,18,8,3,'#bfe9ff','#000',1.5);ctx.strokeStyle='#666';for(const k of [-1,1]){ctx.beginPath();ctx.moveTo(p.x+k*11-5,p.y-7);ctx.lineTo(p.x+k*11+5,p.y-7);ctx.stroke();}ctx.fillStyle='#2de2f5';ctx.fillRect(p.x-2,p.y-3,4,3);return;}
  if(K==='swarm'){for(const d of u.drones){rrect(d.x-5,d.y-3,10,5,2,'#8fd3ff','#000',1);ctx.strokeStyle='#888';ctx.beginPath();ctx.moveTo(d.x-8,d.y-5);ctx.lineTo(d.x+8,d.y-5);ctx.stroke();}return;}
+ if(K==='robo'&&IMG['ld/bots']&&IMG['ld/bots'].width){const p=u.unit;if(u.punch>0)u.punch-=1/60;const pf=u.punch>0?(u.punch>.12?13:14):null,mv=p.vx||p.mv;
+  ldStrip('bots',pf!=null?pf:(Math.hypot((p.x-(u.px||p.x)),(p.y-(u.py||p.y)))>.05?8+Math.floor(t*8)%4:12+(Math.floor(t*2)%2?3:0)),p.x,p.y+4,.3,Math.cos(p.a||0)<0);u.px=p.x;u.py=p.y;return;}
  if(K==='robo'){const p=u.unit,b=u.punch>0?4:0;if(u.punch>0)u.punch-=1/60;rrect(p.x-9,p.y-26,18,18,4,'#c7d0dc','#000',1.5);rrect(p.x-7,p.y-36,14,10,3,'#e0e6ee','#000',1.5);ctx.fillStyle='#2de2f5';ctx.fillRect(p.x-5,p.y-33,10,3);
   ctx.fillStyle='#555';ctx.fillRect(p.x-7,p.y-8,5,8);ctx.fillRect(p.x+2,p.y-8,5,8);rrect(p.x-15-b,p.y-22,7,8,3,'#e83a3a','#000',1);rrect(p.x+8+b,p.y-22,7,8,3,'#e83a3a','#000',1);return;}
  if(K==='tank'){const p=u.unit;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.a||0);rrect(-14,-8,28,14,4,'#4a8a4a','#000',1.5);ctx.restore();ctx.save();ctx.translate(p.x,p.y-6);ctx.rotate(u.ang);rrect(-6,-5,12,10,3,'#5aa05a','#000',1.5);ctx.fillStyle='#333';ctx.fillRect(4,-2,12,4);ctx.restore();return;}
@@ -190,7 +197,13 @@ function ldDrawAgent(G,u){const K=u.U.kind,x=u.x,y=u.y,t=G.t,fired=G.t-(u.fireT=
   ctx.fillStyle='#8aa';ctx.fillRect(x-10,y-14,7,14);ctx.fillRect(x+3,y-14,7,14);rrect(x-20,y-36+st,8,16,3,'#e0e6ee','#000',1.5);rrect(x+12,y-36+st,8,16,3,'#e0e6ee','#000',1.5);return;}}
 // ---------- shots and effects
 function ldDrawShot(G,s){const k=s.k;ctx.save();ctx.translate(s.x,s.y);
- if(k==='shot'&&s.u&&s.u.U.id==='minigun'){ctx.fillStyle=['#ff6ad5','#7ff','#ffd23a','#7f7'][Math.floor(s.x)%4];ctx.beginPath();ctx.arc(0,0,3,0,7);ctx.fill();}
+ if(k==='shot'&&s.u&&s.u.U.id==='minigun'&&ldStripC('icons_t',8,0,0,.12)){}
+ else if(k==='arrow'&&ldStripC('icons_t',10,0,0,.24,(s.ang||0)+Math.PI/2)){}
+ else if(k==='freeze'&&ldStripC('icons_t',11,0,0,.2,Math.atan2((s.e?s.e.y:s.ty)-s.y,(s.e?s.e.x:s.tx)-s.x)+Math.PI/2)){}
+ else if(k==='splash'&&ldStripC('icons_t',14,0,0,.24,Math.atan2((s.e?s.e.y:s.ty)-s.y,(s.e?s.e.x:s.tx)-s.x)+Math.PI/2)){}
+ else if(k==='orb'){ctx.fillStyle='rgba(127,239,255,.35)';ctx.beginPath();ctx.arc(0,0,11,0,7);ctx.fill();if(!ldStripC('icons_t',5,0,0,.2,G.t*6)){ctx.fillStyle='#bff';ctx.beginPath();ctx.arc(0,0,7,0,7);ctx.fill();}}
+ else if(k==='hamster'&&ldStripC('icons_t',15,0,0,.16)){}
+ else if(k==='shot'&&s.u&&s.u.U.id==='minigun'){ctx.fillStyle=['#ff6ad5','#7ff','#ffd23a','#7f7'][Math.floor(s.x)%4];ctx.beginPath();ctx.arc(0,0,3,0,7);ctx.fill();}
  else if(k==='shot'&&ldStripC('fx',Math.floor(G.t*14)%4,0,0,.26)){}
  else if(k==='water'&&ldStripC('fx',5,0,0,.3,Math.atan2((s.e?s.e.y:s.ty)-s.y,(s.e?s.e.x:s.tx)-s.x)+Math.PI)){}
  else if(k==='bubble'&&ldStripC('fx',13,0,0,.24)){}
@@ -258,7 +271,7 @@ function ldDrawMenu(G,p){const C=G.cursor[p],M=C.menu,B=ldMenuBox(G,p),col=p?'#f
  else{['GUNS','AGENTS'].forEach((t,i)=>{const x=B.x+6+i*((B.w-12)/2),s=M.tab===i;rrect(x,B.y+5,(B.w-12)/2-2,18,6,s?col:'rgba(255,255,255,.08)',null);text(t,x+(B.w-12)/4,B.y+18,11,s?'#102':'#cde','center',null);
 });
   const vis=I.slice(M.scroll,M.scroll+7);vis.forEach((it,k)=>{const i=k+M.scroll,y=B.y+28+k*22,s=i===M.sel,can=!it.lock&&!it.have&&G.cash[p]>=it.c;
-   rrect(B.x+6,y,B.w-12,20,6,s?(it.lock?'#555':col):'rgba(255,255,255,.05)',null);ctx.fillStyle=it.U.col;ctx.fillRect(B.x+10,y+5,10,10);
+   rrect(B.x+6,y,B.w-12,20,6,s?(it.lock?'#555':col):'rgba(255,255,255,.05)',null);if(!ldUnitIcon(it.U,B.x+15,y+10,.19)){ctx.fillStyle=it.U.col;ctx.fillRect(B.x+10,y+5,10,10);}
    text(it.t,B.x+24,y+14,11,s?'#102':(it.lock?'#889':'#fff'),'left',null);text(it.lock?it.U.star+'★':it.have?'ON MAP':'$'+it.c,B.x+B.w-10,y+14,11,s?'#102':(can?'#ffd23a':'#a77'),'right',null);
 });
   const it=I[M.sel];if(it)wrap(it.U.d,B.x+8,B.y+B.h-44,B.w-16,12,9,'#bcd',null);

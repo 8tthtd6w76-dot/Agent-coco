@@ -20,6 +20,7 @@ const LD_GUNS=[
  {id:'freeze', n:'Freeze Ray',      kind:'freeze', cost:150,dmg:3,  rate:.6,  range:96, air:1,col:'#7fdfff',star:2,d:'Freezes one goon solid. Frozen goons take extra damage.'},
  {id:'tesla',  n:'Tesla Coil',      kind:'chain',  cost:170,dmg:5,  rate:.8,  range:90, air:1,col:'#2de2f5',star:2,d:'Zap jumps between 3 goons (4 at level 3, 5 at max).'},
  {id:'laser',  n:'Laser Turret',    kind:'beam',   cost:200,dmg:9,  rate:1,   range:110,air:1,col:'#3affd8',star:3,d:'Locks on with a steady cyan beam. Melts tanks and robots.'},
+ {id:'orb',    n:'Orb Cannon',      kind:'orb',    cost:190,dmg:6,  rate:.5,  range:112,air:1,col:'#7fefff',star:3,d:'Lobs a big glowing orb that rolls through a whole line of goons (4 at level 1, up to 8).'},
  {id:'rocket', n:'Confetti Rockets',kind:'splash', cost:220,dmg:9,  rate:.55, range:120,air:1,col:'#ffd23a',star:3,d:'Party rockets that burst on a whole group.'},
  {id:'hamster',n:'Hamster Ray',     kind:'hamster',cost:300,dmg:3,  rate:.35, range:100,air:1,col:'#ffb36a',star:4,d:'Rare one-shot: a hit can turn a goon into a hamster (not bosses).'}];
 

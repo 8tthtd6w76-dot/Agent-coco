@@ -139,6 +139,7 @@ function makeLairDefense(opt){
   switch(K){
    case 'shot':shoot(u,t,S,{x:ox,y:oy-10});break;
    case 'arrow':shoot(u,t,S,{x:ox,y:oy-10,spd:460,pierce:2,ang:u.ang});break;
+   case 'orb':shoot(u,t,S,{x:ox,y:oy-12,spd:210,pierce:3+u.lvl});break;
    case 'water':shoot(u,t,S,{x:ox,y:oy-10,spd:380,push:34});break;
    case 'bubble':shoot(u,t,S,{x:ox,y:oy-10,spd:220,bub:2.2+u.lvl*.4});break;
    case 'freeze':shoot(u,t,S,{x:ox,y:oy-10,spd:360,frz:1.4+u.lvl*.3});break;
