@@ -14,9 +14,9 @@ async function guideOn(){try{await micOn();}catch(e){toast('Smart Guide needs th
 function guideOff(){GUIDE.on=false;clearInterval(GUIDE.timer);clearInterval(GUIDE.ktimer);if(MIC){MIC.node.port.postMessage({feat:false});MIC.onFeat=null;}renderPanel();}
 // loudness per hop -> "onset strength": how much louder it just got (kicks and snares make big jumps)
 function guideFeat(m){const f=m.feat;GUIDE.hop=m.hop;if(typeof coverFeat==='function')coverFeat(m);
- for(let i=0;i<f.length;i+=2){const lf=Math.log(1e-7+f[i]),ll=Math.log(1e-7+f[i+1]);
-  const o=Math.max(0,lf-GUIDE.pF)+1.4*Math.max(0,ll-GUIDE.pL);GUIDE.pF=lf;GUIDE.pL=ll;
-  GUIDE.o.push(f[i]<1e-6?0:o);GUIDE.ot.push(m.t0+(i/2)*m.hop);}
+ for(let i=0;i<f.length;i+=3){const lf=Math.log(1e-7+f[i]),ll=Math.log(1e-7+f[i+1]),lh=Math.log(1e-7+f[i+2]);
+  const o=Math.max(0,lf-GUIDE.pF)+1.4*Math.max(0,ll-GUIDE.pL)+1.2*Math.max(0,lh-(GUIDE.pH||0));GUIDE.pF=lf;GUIDE.pL=ll;GUIDE.pH=lh;
+  GUIDE.o.push(f[i]<1e-6?0:o);GUIDE.ot.push(m.t0+(i/3)*m.hop);}
  const keep=Math.round(10/m.hop);if(GUIDE.o.length>keep){GUIDE.o.splice(0,GUIDE.o.length-keep);GUIDE.ot.splice(0,GUIDE.ot.length-keep);}}
 // tempo: autocorrelation of the onset strength, favoring 80-140 BPM; phase: where the beats line up best
 function guideTempo(){const o=GUIDE.o,n=o.length,hop=GUIDE.hop;if(n<Math.round(4/hop))return;
