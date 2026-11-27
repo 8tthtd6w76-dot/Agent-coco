@@ -8,7 +8,7 @@ const BMODES={
  groove:{n:'Groove / Funk',e:'🕺',bpm:[96,108],every:2,max:6,order:['hat','bass','keys','snare','perc','lead'],prog:[0,0,3,3],pre:{bass:3,keys:8,lead:7},snap:4,d:'Laid-back funk: ghost-note hats, a slap-style bass, clav stabs on the off-beats.'},
  dance:{n:'Dance',e:'💃',bpm:[122,128],every:2,max:7,order:['kick','ohat','bass','clap','keys','perc','lead'],prog:[0,5,3,4],pre:{bass:3,keys:1,lead:0},snap:2,d:'Four on the floor, off-beat hats, pumping chords. Made to move.'},
  chaos:{n:'Chaotic',e:'🌀',bpm:[130,160],every:1,max:5,order:['perc','bass','lead','keys','hat','kick'],prog:null,pre:{bass:10,keys:2,lead:11},snap:4,d:'Wild and unpredictable. Parts mutate every time around.'}};
-const BUDDY={on:false,show:false,mode:'groove',energy:.5,pass:0,lastH:null,stepDone:-1,added:[],heard:[],userHits:0,status:'',motif:null,lastAdd:0,pitch:{m:-1,n:0,start:0,v:0}};
+const BUDDY={drum:{},fill:null,song:true,sec:null,secPass:0,secIdx:-1,theme:null,on:false,show:false,mode:'groove',energy:.5,pass:0,lastH:null,stepDone:-1,added:[],heard:[],userHits:0,status:'',motif:null,lastAdd:0,pitch:{m:-1,n:0,start:0,v:0}};
 const bKind={kick:'drum',snare:'drum',clap:'drum',hat:'drum',ohat:'drum',perc:'drum',bass:'synth',keys:'synth',lead:'synth'};
 // ---------- what it hears ----------
 // your Jam hits (called from qTap while the song plays)
@@ -54,7 +54,7 @@ function bWrite(kind){const M=BMODES[BUDDY.mode],L=P.loop.b-P.loop.a,mode=BUDDY.
    if(kind==='ohat')b%4===2&&steps.push([s,.6]);}
   if(kind==='perc'){p=mode==='groove'?bPick([9,11]):mode==='dance'?10:bPick([9,10,11,13,14]);
    for(let s=0;s<L*4;s++){const b=s%16;if(p===10?(s%2===1||bR()<.3):mode==='chaos'?bR()<.25:[3,7,10,14].includes(b)&&bR()<.8)steps.push([s,p===10?.35:.55]);}}
-  c.notes=c.notes.filter(n=>n.p!==p);steps.forEach(([s,v])=>c.notes.push({t:s/4,p,v:vel(v)}));c.notes.sort((a,b)=>a.t-b.t);return {kind,p,track:t.id};}
+  BUDDY.drum[kind]=steps.map(([s,v])=>({t:s/4,p,v:vel(v)}));bDrumRebuild();return {kind,p,track:t.id};}
  c.notes=[];
  if(kind==='bass'){const R={chill:[[0,2],[2,1.5]],groove:[[0,.5],[.75,.25],[1.5,.25],[2,.5],[2.5,.25,12],[3.25,.25,7]],dance:[[.5,.4],[1.5,.4],[2.5,.4],[3.5,.4]],chaos:null}[mode];
   prog.forEach((deg,bar)=>{const root=bDeg(deg,36);const rh=R||[...Array(3+Math.floor(bR()*4))].map(()=>[Math.floor(bR()*8)/2,.25+bR()*.5,bPick([0,0,7,12,3])]);
@@ -62,7 +62,9 @@ function bWrite(kind){const M=BMODES[BUDDY.mode],L=P.loop.b-P.loop.a,mode=BUDDY.
  if(kind==='keys'){const R={chill:[[0,3.8]],groove:[[.5,.2],[1.75,.2],[2.5,.2],[3.5,.2]],dance:[[.5,.35],[1.5,.35],[2.5,.35],[3.5,.35]],chaos:null}[mode];
   prog.forEach((deg,bar)=>{const ch=[0,2,4].map(i=>bDeg(deg+i,60)),rh=R||[...Array(2+Math.floor(bR()*3))].map(()=>[Math.floor(bR()*16)/4,.25]);
    rh.forEach(([t0,d])=>ch.forEach(m=>c.notes.push({t:bar*4+t0,d,m,v:vel(mode==='chill'?.55:.7)})));});}
- if(kind==='lead'){const mo=buddyMotif();BUDDY.motif=mo;const half=L>=8?L/2:0;
+ if(kind==='lead'){const mel=BUDDY.song&&BUDDY.sec?BSEC[BUDDY.sec].mel:null;let mo;
+  if(mel&&BUDDY.theme&&!BUDDY.newRiff)mo=bMelody(BUDDY.theme,mel);else{mo=buddyMotif();if(!BUDDY.theme||mo.cover)BUDDY.theme=mo;BUDDY.newRiff=false;}
+  BUDDY.motif=mo;const half=L>=8&&mel!=='chorus'?L/2:0;
   // call and response: your phrase is the call, the buddy's cover answers in the second half of the loop
   for(let rep=0;rep*4<L-half;rep++){if(mode!=='chaos'&&rep%2===1&&L-half>4&&bR()<.5)continue;
    mo.notes.forEach((n,i)=>{let m=n.m;if(rep%2===1){if(mode==='chaos')m=bSnapScale(2*mo.notes[0].m-m);else if(i===mo.notes.length-1)m=bDeg(0,Math.floor((m-P.key)/12)*12);}
@@ -88,11 +90,13 @@ function buddyStep(){const M=BMODES[BUDDY.mode],E=BUDDY.energy;BUDDY.pass++;
  const keysNow=BUDDY.heard.filter(n=>n.src==='keys'&&now-n.at<loopMs),micNow=BUDDY.heard.filter(n=>n.src==='mic'&&now-n.at<loopMs*2);
  const every=Math.max(1,Math.round(M.every*(1.5-E)));
  // you played a riff on the keys: answer it with a cover on the next time around (call and response)
- if(keysNow.length>=3){bWrite('lead');BUDDY.lastCover=BUDDY.pass;if(!BUDDY.added.includes('lead'))BUDDY.added.push('lead');bSay(`Answering your riff: a ${BUDDY.motif.notes.length}-note cover on its ${FM_PRESETS[bTrack('lead').patch.p].n} synth`);QK.needPanel=true;return;}
+ if(keysNow.length>=3){BUDDY.newRiff=true;bWrite('lead');BUDDY.lastCover=BUDDY.pass;if(!BUDDY.added.includes('lead'))BUDDY.added.push('lead');bSay(`Answering your riff: a ${BUDDY.motif.notes.length}-note cover on its ${FM_PRESETS[bTrack('lead').patch.p].n} synth`);QK.needPanel=true;return;}
  if(busy&&BUDDY.mode!=='chaos'){bSay('Listening to you… it answers when you leave a gap.');return;}
  // a melody from the music in the room: now and then it picks up the line and covers it
- if(BUDDY.added.includes('lead')&&micNow.length>=4&&BUDDY.pass-(BUDDY.lastCover||0)>=every*3){bWrite('lead');BUDDY.lastCover=BUDDY.pass;bSay('Picked up a line from the music and made a cover of it');return;}
+ if(BUDDY.added.includes('lead')&&micNow.length>=4&&BUDDY.pass-(BUDDY.lastCover||0)>=every*3){BUDDY.newRiff=true;bWrite('lead');BUDDY.lastCover=BUDDY.pass;bSay('Picked up a line from the music and made a cover of it');return;}
+ const songMoved=bSongStep();
  if(BUDDY.mode==='chaos'&&BUDDY.added.length){const k=bPick(BUDDY.added);bWrite(k);if(bR()<.3)BUDDY.chaosProg=null;}
+ if(songMoved&&BUDDY.mode!=='chaos')return;
  if(BUDDY.pass-BUDDY.lastAdd<every)return;BUDDY.lastAdd=BUDDY.pass;
  const max=Math.round(M.max*(.6+.6*E));
  if(BUDDY.added.length<max){const next=M.order.find(k=>!BUDDY.added.includes(k)&&!songHas(k));
@@ -105,7 +109,7 @@ function buddyTick(){if(!BUDDY.on)return;if(!T.playing||!loopOn()){BUDDY.lastH=n
  if(BUDDY.lastH!=null&&h<BUDDY.lastH-.5)BUDDY.cycle=(BUDDY.cycle||0)+1;BUDDY.lastH=h;
  if(h>=P.loop.b-.6&&BUDDY.stepDone!==BUDDY.cycle){BUDDY.stepDone=BUDDY.cycle;buddyStep();QK.dirtyDraw=true;}
  const now=performance.now();if(now-(BUDDY.pt||0)>40){BUDDY.pt=now;buddyPitch();}}
-async function buddyStart(){await ensureAudio();BUDDY.on=true;BUDDY.show=true;BUDDY.pass=0;BUDDY.lastAdd=-99;BUDDY.heard=[];BUDDY.userHits=0;BUDDY.chaosProg=null;
+async function buddyStart(){await ensureAudio();BUDDY.on=true;BUDDY.show=true;BUDDY.pass=0;BUDDY.lastAdd=-99;BUDDY.heard=[];BUDDY.userHits=0;BUDDY.chaosProg=null;BUDDY.sec=null;BUDDY.fill=null;BUDDY.drum={};BUDDY.theme=null;
  BUDDY.added=[...new Set(P.tracks.filter(t=>(t.quick||'').startsWith('buddy')).flatMap(t=>t.type==='drums'?[]:[t.quick.slice(6)]))];
  if(!GUIDE.on)await guideOn().catch(()=>{});
  const M=BMODES[BUDDY.mode],empty=!P.tracks.some(t=>t.clips.some(c=>t.type==='audio'?c.src:c.notes.length));
@@ -114,14 +118,45 @@ async function buddyStart(){await ensureAudio();BUDDY.on=true;BUDDY.show=true;BU
   qEnsureLoop();const first=M.order.find(k=>!songHas(k));if(first&&!BUDDY.added.includes(first)){bWrite(first);BUDDY.added.push(first);}
   if(GUIDE.on&&GUIDE.bpmConf>.35)await guideSync();else await play(P.loop.a);}
  bSay(`${M.e} ${M.n} buddy is in! Play something, then leave a gap and it answers.`);syncTop();renderTimeline();renderPanel();}
-function buddyStop(){BUDDY.on=false;bSay('Buddy stopped. Its parts stay in your song (the 🤖 tracks). Remove them below if you like.');renderPanel();}
+function buddyStop(){BUDDY.on=false;BUDDY.sec=null;BUDDY.fill=null;bApplySection();bSay('Buddy stopped. Its parts stay in your song (the 🤖 tracks). Remove them below if you like.');renderPanel();}
 function buddyRemove(){commit();P.tracks=P.tracks.filter(t=>!(t.quick||'').startsWith('buddy'));BUDDY.added=[];updateMix();renderTimeline();renderPanel();toast('Removed the Buddy parts');}
-function buddyKeep(){commit();let n=0;P.tracks.forEach(t=>{if((t.quick||'').startsWith('buddy')){t.quick=null;t.name=t.name.replace('🤖 Buddy','Buddy');n++;}});BUDDY.added=[];renderTimeline();renderPanel();toast(n?'Kept! The buddy\'s parts are now your tracks':'Nothing to keep yet');}
+function buddyKeep(){commit();BUDDY.sec=null;BUDDY.fill=null;bApplySection();let n=0;P.tracks.forEach(t=>{if((t.quick||'').startsWith('buddy')){t.quick=null;t.name=t.name.replace('🤖 Buddy','Buddy');n++;}});BUDDY.added=[];renderTimeline();renderPanel();toast(n?'Kept! The buddy\'s parts are now your tracks':'Nothing to keep yet');}
 function buddyStrip(){const s=el('div','qbuddy');s.append(el('span','bear','🤖'),el('b','','Jam Buddy'));
  const mc=el('div','bmodes');Object.entries(BMODES).forEach(([k,M])=>{const b=btn(M.e+' '+M.n,()=>{BUDDY.mode=k;BUDDY.chaosProg=null;
    P.tracks.filter(t=>(t.quick||'').startsWith('buddy')&&t.type==='synth').forEach(t=>{const kind=t.quick.slice(6);if(M.pre[kind]!=null){const v=t.patch.vol;t.patch=fm1Patch(M.pre[kind]);t.patch.vol=v;}});
    if(BUDDY.on&&T.playing)BUDDY.added.forEach(bWrite);renderPanel();toast(M.e+' '+M.n+': '+M.d);},M.d,BUDDY.mode===k?'on':'');mc.appendChild(b);});
  s.append(mc);const en=slider('Energy',0,1,.01,()=>BUDDY.energy,v=>{BUDDY.energy=v;P.tracks.forEach(t=>{if((t.quick||'').startsWith('buddy'))t.vol=.42+.35*v;});updateMix();},v=>v<.34?'shy':v<.67?'steady':'bold');en.classList.add('bknob');s.append(en);
+ s.append(btn(BUDDY.song?'🎼 Song mode: on':'🎼 Song mode: off',()=>{BUDDY.song=!BUDDY.song;if(!BUDDY.song){BUDDY.sec=null;BUDDY.fill=null;}bApplySection();renderPanel();},'On: the buddy arranges a song, with verses, choruses and breaks, bringing its parts in and out and writing a melody for each part. Off: it just keeps the loop going','bsong'+(BUDDY.song?' on':'')));
  s.append(BUDDY.on?btn('■ Stop buddy',buddyStop,'Stops the buddy. Its parts stay in the song.','bgo on'):btn('▶ Start buddy',buddyStart,'The buddy starts the loop (in time with any music it hears) and joins in','bgo'),
   btn('Keep its parts',buddyKeep,'Turns the buddy\'s 🤖 tracks into your own tracks'),btn('Remove its parts',buddyRemove,'Deletes the buddy\'s 🤖 tracks'));
  const st=el('span','btip',BUDDY.status||BMODES[BUDDY.mode].d);st.id='bStatus';s.append(st);return s;}
+
+// ---------- song mode: the buddy arranges a song out of the loop ----------
+// It cycles sections, bringing its background parts in and out, writes a melody for each section from the theme
+// (your riff, or its own hook), and plays a drum fill going into each new section. The beat keeps going the whole time.
+const BSEC={intro:{n:'Intro',on:['kick','hat','ohat','keys','perc'],say:'Intro: just the groove and chords'},
+ verse:{n:'Verse',on:['kick','hat','ohat','snare','clap','bass','keys','lead'],mel:'verse',say:'Verse: the main tune'},
+ chorus:{n:'Chorus',on:'all',mel:'chorus',say:'Chorus: everybody in, with a higher hook'},
+ break:{n:'Break',on:['hat','keys','lead','perc'],mel:'bridge',say:'Break: drums drop back, the melody turns around'}};
+const BSONG=['verse','chorus','verse','break','chorus'];
+// move a note up or down k steps of the song's scale
+function bShiftDeg(m,k){let x=m,step=Math.sign(k);for(let i=0;i<Math.abs(k);i++){x+=step;while(!inScale(x))x+=step;}return x;}
+function bMelody(th,mel){const n=th.notes.map(x=>Object.assign({},x));
+ if(mel==='chorus'){n.forEach(x=>{x.m=bShiftDeg(x.m,2);x.d=Math.min(1,x.d*1.6);x.v=Math.min(1,x.v+.1);});const lm=n[n.length-1].m;let r=bDeg(0,Math.floor((lm-P.key)/12)*12);if(r<lm-2)r+=12;n[n.length-1].m=r;}
+ if(mel==='bridge'){const a=n[0].m;n.forEach((x,i)=>{x.m=bSnapScale(2*a-x.m);x.d=Math.max(x.d,.5);});for(let i=n.length-1;i>0;i-=2)if(n.length>3)n.splice(i,1);}
+ return {notes:n,cover:th.cover,mel};}
+function bDrumRebuild(){const t=P.tracks.find(t=>t.quick==='buddy-drums');if(!t)return;const c=bClip(t),on=BUDDY.song&&BUDDY.sec?BSEC[BUDDY.sec].on:'all';
+ c.notes=[];for(const k in BUDDY.drum)if(on==='all'||on.includes(k))c.notes.push(...BUDDY.drum[k]);
+ if(BUDDY.fill){const L=P.loop.b-P.loop.a;c.notes=c.notes.filter(n=>n.t<L-1||n.p===0);c.notes.push(...BUDDY.fill);}c.notes.sort((a,b)=>a.t-b.t);}
+function bApplySection(){const on=BUDDY.song&&BUDDY.sec?BSEC[BUDDY.sec].on:'all';
+ P.tracks.forEach(t=>{const q=t.quick||'';if(!q.startsWith('buddy-')||t.type!=='synth')return;t.mute=!(on==='all'||on.includes(q.slice(6)));});bDrumRebuild();}
+// called from buddyStep once the band has 3+ parts. Returns true when it changed something this time around.
+function bSongStep(){if(!BUDDY.song||BUDDY.added.length<3)return false;const L=P.loop.b-P.loop.a,len=Math.max(2,Math.round(16/L))*(BUDDY.mode==='chill'?2:1);
+ if(BUDDY.fill){BUDDY.fill=null;}
+ if(BUDDY.sec==null){BUDDY.secIdx=-1;BUDDY.sec='intro';BUDDY.secPass=0;bApplySection();bSay('🎼 Song mode: '+BSEC.intro.say);return true;}
+ BUDDY.secPass++;
+ if(BUDDY.secPass===len-1&&BUDDY.mode!=='chill'){const p=BUDDY.mode==='dance'?2:1;BUDDY.fill=[0,1,2,3].map(i=>({t:L-1+i/4,p,v:.45+i*.15}));if(BUDDY.mode!=='chaos')BUDDY.fill.push({t:L-.5,p:3,v:.6});bDrumRebuild();}
+ if(BUDDY.secPass>=len){BUDDY.secIdx=(BUDDY.secIdx+1)%BSONG.length;BUDDY.sec=BSONG[BUDDY.secIdx];BUDDY.secPass=0;BUDDY.fill=null;
+  if(BUDDY.added.includes('lead'))bWrite('lead');if(BUDDY.sec==='chorus'&&BUDDY.added.includes('keys'))bWrite('keys');
+  bApplySection();bSay('🎼 '+BSEC[BUDDY.sec].say);QK.needPanel=true;return true;}
+ return false;}

@@ -13,7 +13,7 @@ async function guideOn(){try{await micOn();}catch(e){toast('Smart Guide needs th
  renderPanel();toast('🎧 Smart Guide is listening. Play some music near your Mac.');}
 function guideOff(){GUIDE.on=false;clearInterval(GUIDE.timer);clearInterval(GUIDE.ktimer);if(MIC){MIC.node.port.postMessage({feat:false});MIC.onFeat=null;}renderPanel();}
 // loudness per hop -> "onset strength": how much louder it just got (kicks and snares make big jumps)
-function guideFeat(m){const f=m.feat;GUIDE.hop=m.hop;
+function guideFeat(m){const f=m.feat;GUIDE.hop=m.hop;if(typeof coverFeat==='function')coverFeat(m);
  for(let i=0;i<f.length;i+=2){const lf=Math.log(1e-7+f[i]),ll=Math.log(1e-7+f[i+1]);
   const o=Math.max(0,lf-GUIDE.pF)+1.4*Math.max(0,ll-GUIDE.pL);GUIDE.pF=lf;GUIDE.pL=ll;
   GUIDE.o.push(f[i]<1e-6?0:o);GUIDE.ot.push(m.t0+(i/2)*m.hop);}
@@ -81,12 +81,12 @@ function guideStrip(){const s=el('div','qguide');s.id='qguide';
  s.innerHTML=`<span class="gear">🎧</span><div class="gvu"><i id="gVu"></i></div><span class="gpulse" id="gPulse"></span>
  <div class="gval"><small>Tempo</small><b id="gBpm">…</b></div><div class="gval"><small>Key</small><b id="gKey">…</b></div>`;
  s.append(btn('Match',guideMatch,'Set your song to the tempo and key of the music (notes already in your song move to the new key)','gbtn'),
-  btn('Start in time',guideSync,'Starts your loop exactly on the next beat of the music','gbtn'),btn(GUIDE.lock?'Stay locked: on':'Stay locked: off',()=>{GUIDE.lock=!GUIDE.lock;renderPanel();},'Keeps nudging your loop so it stays on the music\'s beat, even if the music drifts a little','gbtn'+(GUIDE.lock?' on':'')),el('span','gtip',''));
+  btn(COVER?'✓ Make my cover':'🎙 Listen & cover',()=>COVER?coverFinish():coverStart(),COVER?'Turns what it heard into your own lo-fi cover':'Learns a song playing near your Mac (chords, bass, melody, beat) and makes a lo-fi cover of it','gbtn'+(COVER?' on':'')),btn('Start in time',guideSync,'Starts your loop exactly on the next beat of the music','gbtn'),btn(GUIDE.lock?'Stay locked: on':'Stay locked: off',()=>{GUIDE.lock=!GUIDE.lock;renderPanel();},'Keeps nudging your loop so it stays on the music\'s beat, even if the music drifts a little','gbtn'+(GUIDE.lock?' on':'')),el('span','gtip',''));if(COVER){const x=btn('Cancel',coverCancel,'','gbtn');s.append(x);s.querySelector('.gtip').id='cvStatus';}
  setTimeout(guideUpdateStrip,0);return s;}
 function guideUpdateStrip(){const b=document.getElementById('gBpm');if(!b)return;const hasT=GUIDE.bpmConf>.25&&GUIDE.bpm>0,hasK=GUIDE.keyConf>.2&&GUIDE.key>=0;
  b.textContent=hasT?Math.round(GUIDE.bpm)+' BPM':'…';b.parentNode.classList.toggle('sure',GUIDE.bpmConf>.5);
  const k=document.getElementById('gKey');k.textContent=hasK?guideKeyName():'…';k.parentNode.classList.toggle('sure',GUIDE.keyConf>.5);
- const t=document.querySelector('#qguide .gtip');if(t)t.textContent=GUIDE.tip;}
+ const t=document.querySelector('#qguide .gtip');if(t&&!COVER)t.textContent=GUIDE.tip;}
 // every frame: mic meter, beat pulse, and dots on the keys that are sounding in the room right now
 function guideFrame(){const v=document.getElementById('gVu');if(v&&MIC)v.style.width=Math.min(100,MIC.lvl*140)+'%';
  if(GUIDE.period>0&&AC&&GUIDE.bpmConf>.25){const ph=((AC.currentTime-GUIDE.beatT)/GUIDE.period)%1;const p=document.getElementById('gPulse');if(p)p.style.opacity=ph<.15||ph>.97?1:.15;}

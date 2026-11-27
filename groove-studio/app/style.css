@@ -267,3 +267,4 @@ canvas.wave{width:100%;height:120px;background:#0f1116;border-radius:8px;border:
 .qbuddy .bgo{background:#1f3a28;border-color:#6bcb77;color:#bff5c8;font-weight:700;white-space:nowrap}.qbuddy .bgo.on{background:#4a1c24;border-color:var(--rec);color:#ffd1d6}
 .qbuddy .btip{font-size:12.5px;color:#ffe0ec;flex:1;min-width:180px}
 .qguide .gbtn.on{background:#4dd4ff;color:#06222c;font-weight:700}
+.qbuddy .bsong.on{background:#ffd23a;border-color:#ffd23a;color:#2a1a00;font-weight:700}
