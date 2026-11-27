@@ -28,7 +28,7 @@ function ldDrawEnd(G){const e=G.end,t=G.map.end;const painted=G.map.img&&IMG[G.m
  if(painted){if(t==='core'){const g=.6+.4*Math.sin(G.t*3);ctx.fillStyle=`rgba(45,226,245,${.3*g})`;ctx.beginPath();ctx.arc(e.x+5,e.y-10,22,0,7);ctx.fill();ctx.fillStyle='#bff';ctx.strokeStyle='#000';ctx.lineWidth=2;ctx.beginPath();ctx.arc(e.x+5,e.y-12,10,0,7);ctx.fill();ctx.stroke();
    if(G.shield>0){ctx.strokeStyle='rgba(127,255,255,.8)';ctx.beginPath();ctx.arc(e.x+5,e.y-10,26,0,7);ctx.stroke();}}
   else if(G.shield>0){ctx.strokeStyle='rgba(127,255,255,.7)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(e.x,e.y-10,20,0,7);ctx.stroke();}
-  if(ldUnlocked(LD_SPECIALS[4])&&!G.butt){const p=G.perch;if(SHEETS.agent_coco)drawSprite('agent_coco','idle_1',p.x,p.y,p.x>W/2,1,.32);}return;}
+  if(ldUnlocked(LD_SPECIALS[4])&&!G.butt){const p=G.perch;if(!ldDrawPerchCoco(G)&&SHEETS.agent_coco)drawSprite('agent_coco','idle_1',p.x,p.y,p.x>W/2,1,.32);}return;}
  if(t==='ladder'){ctx.fillStyle='#8a8e96';ctx.fillRect(e.x-14,e.y-34,4,40);ctx.fillRect(e.x+10,e.y-34,4,40);for(let i=0;i<5;i++)ctx.fillRect(e.x-12,e.y-30+i*8,24,3);}
  if(t==='door'){rrect(e.x-16,e.y-36,32,40,4,'#7a4a22','#000',2);ctx.fillStyle='#ffd23a';ctx.fillRect(e.x+8,e.y-18,4,4);}
  // Sandy's core (always at the end: the Lair's health)
@@ -36,7 +36,7 @@ function ldDrawEnd(G){const e=G.end,t=G.map.end;const painted=G.map.img&&IMG[G.m
  const g=.6+.4*Math.sin(G.t*3);ctx.fillStyle=`rgba(45,226,245,${.25*g})`;ctx.beginPath();ctx.arc(cx,cy-14,18,0,7);ctx.fill();ctx.fillStyle='#bff';ctx.strokeStyle='#000';ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,cy-14,9,0,7);ctx.fill();ctx.stroke();
  if(G.shield>0){ctx.strokeStyle='rgba(127,255,255,.8)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,cy-12,22,0,7);ctx.stroke();}
  // Coco's perch (Butt Bomb launch spot)
- if(ldUnlocked(LD_SPECIALS[4])&&!G.butt){const p=G.perch;rrect(p.x-12,p.y-4,24,10,3,'#7a5a3a','#000',1.5);if(SHEETS.agent_coco)drawSprite('agent_coco','idle_1',p.x,p.y-2,p.x>W/2,1,.32);}}
+ if(ldUnlocked(LD_SPECIALS[4])&&!G.butt){const p=G.perch;if(!ldDrawPerchCoco(G)){rrect(p.x-12,p.y-4,24,10,3,'#7a5a3a','#000',1.5);if(SHEETS.agent_coco)drawSprite('agent_coco','idle_1',p.x,p.y-2,p.x>W/2,1,.32);}}}
 // Michael's fortress + core sheets: core (damage states by Lair health, shield bubble by Core Shield level), door, walls, skylight, lookout tower.
 function ldCoreFrame(G){const f=G.hp/G.hpMax;if(G.shield>0)return 8+Math.max(1,Math.min(3,G.fort.shield||1));
  if(G.hit>0&&Math.sin(G.t*40)>0)return 5;return f>.75?Math.floor(G.t*3)%4:f>.5?5:f>.25?6:7;}
@@ -48,7 +48,7 @@ function ldDrawFortArt(G){if(!(G.map.img&&IMG[G.map.img]&&IMG[G.map.img].width&&
  const cx=t==='core'?e.x+5:e.x+side*34,cy=t==='core'?e.y+14:e.y+10;
  if(F.door&&t!=='core')ldStrip('fortress',F.door-1,e.x,e.y+12,.34);
  ldStrip('core',ldCoreFrame(G),cx,cy,t==='core'?.42:.32);
- if(ldUnlocked(LD_SPECIALS[4])&&!G.butt){const p=G.perch;if(SHEETS.agent_coco)drawSprite('agent_coco','idle_1',p.x,p.y,p.x>W/2,1,.32);}
+ if(ldUnlocked(LD_SPECIALS[4])&&!G.butt){const p=G.perch;if(!ldDrawPerchCoco(G)&&SHEETS.agent_coco)drawSprite('agent_coco','idle_1',p.x,p.y,p.x>W/2,1,.32);}
  return true;}
 const LD_SPECIAL_ICON={rain:2,emp:6,ice:9,drop:14};
 // icons strip (Michael's sheet): 0 coin, 1 coin stack, 2 pizza slice, 3 tip jar, 4 energy can, 5 clock, 6 winged pizza box, 7 shield, 8 magnet, 9 gift, 10 star, 11 hot sauce, 12 gear, 13 wire coil, 14 chip, 15 battery
@@ -58,7 +58,7 @@ function ldIcon(i,x,y,s){return ldStripC('icons',i,x,y,s||.3);}
 function ldRowArt(r,x,y){const L=r.lvl||0;
  if(r.F){const id=r.F.id,m={door:0,walls:3,shutter:6,lookout:9}[id];if(m!=null)return ldStrip('fortress',m+Math.max(0,L-1),x,y+15,.25);
   if(id==='shield')return ldStrip('core',L?8+L:0,x,y+15,.25);if(LD_FORT_ICON[id]!=null)return ldIcon(LD_FORT_ICON[id],x,y,.32);return false;}
- if(r.S){const ic=LD_SPECIAL_ICON[r.S.id];return ic!=null&&ldStripC('sfx',ic,x,y,.2);}
+ if(r.S){const ic=LD_SPECIAL_ICON[r.S.id];if(r.S.id==='butt')return ldStripC('bb_b',10,x,y,.22);return ic!=null&&ldStripC('sfx',ic,x,y,.2);}
  if(r.U){const TA=LD_TOWER_ART[r.U.id];if(TA)return ldStrip(TA[0],TA[1],x,y+16,.26);
   const AG={coco:0,sisi:4,sandy:8,barro:12}[r.U.id];if(AG!=null)return ldStrip('agents',AG,x,y+16,.26);
   if(r.U.id==='hover'||r.U.id==='swarm')return ldStripC('heads',12,x,y,.3);}
@@ -73,6 +73,7 @@ function ldDrawFoe(G,e){const F=e.F,x=e.x,y=e.y-(e.air?22:0),fl=Math.cos(e.a)<0,
  if(e.frz>0){ctx.filter='hue-rotate(160deg) brightness(1.3)';}
  const A=F.art;let done=false;
  if(e.dead&&!e.reached){const k=Math.min(3,Math.floor(e.deadT*6));
+  if(e.flat&&ldStripC('bb_c',k<1?6:4,x,y-10,.3,0,Math.max(0,1-Math.max(0,e.deadT-.6)*2))){ctx.filter='none';ctx.restore();return;}
   if(LD_DIR4[A]&&A!=='chute'){const D=LD_DIR4[A];done=ldStrip(D[0],12+k,x,y+2,D[1]*s,fl);}
   else if(A==='snake'||A==='scorpion'||A==='spider')done=ldStrip(A,8+k,x,y+2,.3,A==='spider'?false:!fl);
   else if(A==='crab')done=ldStrip('crab',9+Math.min(2,k),x,y+2,.34,fl);
@@ -213,6 +214,10 @@ function ldDrawFx(G,f){const t=f.t;
  else if(f.k==='spark'&&t<.4&&ldStripC('fx',15,f.x,f.y-10,.3+t*.5,0,Math.max(0,1-t*2.5))){}
  else if(f.k==='pop'&&t>=.35){}
  else if(f.k==='boom'||f.k==='pop'){ctx.fillStyle=f.k==='boom'?'#ffd23a':'#fff';ctx.globalAlpha=Math.max(0,1-t*2);for(let i=0;i<8;i++){const a=i*.785,d=(f.r||18)*Math.min(1,t*4);ctx.fillStyle=['#ff5ae0','#ffd23a','#7ff','#7f7'][i%4];ctx.fillRect(f.x+Math.cos(a)*d,f.y+Math.sin(a)*d*.6-8,4,4);}ctx.globalAlpha=1;}
+ else if(f.k==='butt'&&IMG['ld/bb_a']&&IMG['ld/bb_a'].width){
+  if(f.mush){ldStrip('bb_a',15,f.x,f.y+6-t*20,.5+t*.3,false,Math.max(0,1-t*1.6));return;}
+  ldStrip('bb_a',14,f.x,f.y+6,.3+t*.4,false,Math.max(0,1-t*1.8));ldStripC('bb_a',13,f.x,f.y-6,.25+t*.9,0,Math.max(0,1-t*2));if(t<.18)ldStripC('bb_a',12,f.x,f.y-14,.32+t,0,1);
+  if(f.last&&t<.6)ldStrip('bb_a',15,f.x,f.y+6-t*20,.4+t*.3,false,Math.max(0,1-t*1.6));}
  else if(f.k==='butt'){const r=Math.min(1,t*3)*60;ctx.globalAlpha=Math.max(0,1-t*1.7);ctx.fillStyle='#ffd23a';ctx.beginPath();for(let i=0;i<16;i++){const a=i*Math.PI/8,d=i%2?r*.5:r;ctx.lineTo(f.x+Math.cos(a)*d,f.y-10+Math.sin(a)*d*.6);}ctx.closePath();ctx.fill();ctx.strokeStyle='#ff5a1a';ctx.lineWidth=3;ctx.stroke();
   ctx.fillStyle='rgba(200,170,120,.7)';ctx.beginPath();ctx.arc(f.x,f.y-24-t*40,10+t*30,0,7);ctx.fill();ctx.globalAlpha=1;}
  else if(f.k==='pizza'){if(t<0)return;const y=f.y-Math.max(0,.4-t)*400;if(ldStripC('fx',Math.floor(t*14)%4,f.x,y,.32))return;ctx.save();ctx.translate(f.x,y);ctx.rotate(t*8);ctx.fillStyle='#ffd23a';ctx.beginPath();ctx.moveTo(0,-8);ctx.lineTo(7,7);ctx.lineTo(-7,7);ctx.closePath();ctx.fill();ctx.strokeStyle='#a05a1a';ctx.stroke();ctx.restore();}
@@ -270,7 +275,7 @@ function ldDrawHud(G){rrect(0,0,W,LD_HUD,0,'rgba(6,12,26,.92)',null);ctx.fillSty
  rrect(0,LD_BAR,W,H-LD_BAR,0,'rgba(6,12,26,.9)',null);
  G.specials.forEach((S,i)=>{const x=6+i*100,y=LD_BAR+5,cd=G.cd[S.id]||0,sel0=G.sp[0]===i,sel1=G.np>1&&G.sp[1]===i;
   rrect(x,y,96,26,7,cd>0?'#1a2230':S.col,sel0?'#2de2f5':sel1?'#ff5ae0':'#000',sel0||sel1?3:1.5);if(cd>0){ctx.fillStyle='rgba(255,255,255,.18)';ctx.fillRect(x+2,y+2,92*(1-cd/(S.cd*(1-.15*G.fort.fridge))),22);}
-  const ic=LD_SPECIAL_ICON[S.id],hasIc=ic!=null&&ldStripC('sfx',ic,x+12,y+13,.17,0,cd>0?.5:1),tx=x+(hasIc?55:48);
+  const ic=LD_SPECIAL_ICON[S.id],hasIc=S.id==='butt'?ldStripC('bb_a',12,x+12,y+13,.2,0,cd>0?.5:1):ic!=null&&ldStripC('sfx',ic,x+12,y+13,.17,0,cd>0?.5:1),tx=x+(hasIc?55:48);
   text(S.n,tx,y+12,S.n.length>13?8:9,cd>0?'#9ab':'#102','center',null);text(cd>0?Math.ceil(cd)+'s':'READY',tx,y+23,8,cd>0?'#9ab':'#102','center',null);
   MUI.add(x,y,96,26,{click:()=>{G.sp[0]=i;SFX.move();if(!S.aim)G.fire(0,S.id,G.cursor[0].x,G.cursor[0].y);else G.armed=S.id;}});});
  const bx=W-118,by=LD_BAR+5;

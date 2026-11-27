@@ -50,7 +50,7 @@ function makeLairDefense(opt){
  G.maxWaves=night?night.waves:Infinity;
  G.specials=LD_SPECIALS.filter(ldUnlocked);G.sp=[0,0];
  for(let p=0;p<np;p++)G.cursor[p]={x:p?W/2+60:W/2-60,y:H/2,menu:null,hov:-1,blink:0};
- const fl=(x,y,t,c='#fff',sz=13)=>G.floats.push({x:Math.max(60,Math.min(W-60,x)),y:Math.max(LD_HUD+16,Math.min(LD_BAR-8,y)),t,c,sz,life:1.1});
+ const fl=(x,y,t,c='#fff',sz=13)=>{const hw=Math.min(W/2-4,String(t).length*sz*.33+6);G.floats.push({x:Math.max(hw,Math.min(W-hw,x)),y:Math.max(LD_HUD+16,Math.min(LD_BAR-8,y)),t,c,sz,life:1.1});};
  G.float=fl;
  const trackFor=()=>night&&night.boss&&G.bossOn?(night.boss==='baldey'?'ld_baldey':'ld_boss'):['ld_alley','ld_roof','ld_lair'][mapId];
  // ---------- waves
@@ -251,16 +251,18 @@ function ldButtStart(G,p){const B={p,ph:'launch',t:0,x:G.perch.x,y:G.perch.y,z:0
 function ldButtNext(G,B){const live=G.foes.filter(e=>!e.dead&&e.fall<=0&&!e.buttMark);if(!live.length||B.hits>=B.max)return null;
  return live.reduce((a,b)=>Math.hypot(b.x-B.x,b.y-B.y)<Math.hypot(a.x-B.x,a.y-B.y)?b:a);}
 function ldButtUpdate(G,dt){const B=G.butt;B.t+=dt;
- if(B.ph==='launch'){B.z=B.t*260;if(B.t>.55){B.ph='aim';B.t=0;}return;}
+ if(B.ph==='launch'){B.z=Math.max(0,B.t-.3)*300;if(B.t>.8){B.ph='aim';B.t=0;}return;}
  if(B.ph==='aim'||B.ph==='hop'){if(B.ph==='aim'||!B.to||B.to.dead){const n=ldButtNext(G,B);if(!n){B.ph='home';B.t=0;B.from={x:B.x,y:B.y,z:B.z};return;}n.buttMark=1;B.to=n;B.from={x:B.x,y:B.y,z:B.z};B.ph='hop';B.t=0;}
   const dur=B.hits?.42:.6,k=Math.min(1,B.t/dur);B.x=B.from.x+(B.to.x-B.from.x)*k;B.y=B.from.y+(B.to.y-B.from.y)*k;B.z=(1-k)*B.from.z+Math.sin(k*Math.PI)*90*(B.hits?1:.3);B.drop=k>.6;
-  if(k>=1){const e=B.to;B.hits++;e.buttMark=0;if(!e.dead){e.hp=0;G.kill(e,B.p);}G.shake=.35;G.fx.push({k:'butt',x:e.x,y:e.y,t:0});G.float(e.x,e.y-30,['SMASH!','BOOM!','SQUISH!','BONK!','POW!'][B.hits%5],'#ff8a1a',16);
+  if(k>=1){const e=B.to;B.hits++;e.buttMark=0;if(!e.dead){e.hp=0;e.flat=LD_FLAT_ART.includes(e.F.art)&&!e.F.boss;G.kill(e,B.p);}G.shake=.35;B.hitT=G.t;G.fx.push({k:'butt',x:e.x,y:e.y,t:0,last:B.hits>=B.max});G.float(e.x,e.y-30,['SMASH!','BOOM!','SQUISH!','BONK!','POW!'][B.hits%5],'#ff8a1a',16);
    beep(90,.18,'sawtooth',.1,-60);B.x=e.x;B.y=e.y;B.z=0;B.t=0;B.to=null;B.ph=B.hits>=B.max?'home':'aim';if(B.ph==='aim'){B.ph='hop';B.to=ldButtNext(G,B);if(B.to){B.to.buttMark=1;B.from={x:B.x,y:B.y,z:0};}else{B.ph='home';}}
    if(B.ph==='home')B.from={x:B.x,y:B.y,z:B.z};}
   return;}
  if(B.ph==='home'){const k=Math.min(1,B.t/.8);B.x=B.from.x+(G.perch.x-B.from.x)*k;B.y=B.from.y+(G.perch.y-B.from.y)*k;B.z=Math.sin(k*Math.PI)*110;
-  if(k>=1){G.float(G.perch.x,G.perch.y-30,B.hits+' GOONS SMASHED!','#ffd23a',16);G.butt=null;}}}
-function ldDrawButt(G){const B=G.butt;if(!B)return;const x=B.x,y=Math.max(LD_HUD+34,B.y-B.z);
+  if(k>=1){G.float(G.perch.x,G.perch.y-30,B.hits+' GOONS SMASHED!','#ffd23a',16);G.butt=null;G.perchLand=G.t;if(B.hits)G.fx.push({k:'butt',x:B.from.x,y:B.from.y,t:0,mush:1});}}}
+// goons that get the flattened-goon frames (bb_c 4-7) when the Butt Bomb lands on them
+const LD_FLAT_ART=['walker','meatball','chute','thrower','techie','sneak','flyer','cart','karate_red','karate_pink','brute','blockhead'];
+function ldDrawButt(G){const B=G.butt;if(!B)return;if(ldDrawButtArt(G,B))return;const x=B.x,y=Math.max(LD_HUD+34,B.y-B.z);
  ctx.fillStyle='rgba(0,0,0,.3)';ctx.beginPath();ctx.ellipse(B.x,B.y+2,14,5,0,0,7);ctx.fill();
  if(B.ph==='hop'&&B.to){ctx.save();ctx.translate(B.to.x,B.to.y);ctx.rotate(G.t*4);ctx.strokeStyle='#ff3a3a';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,14,0,7);ctx.moveTo(-18,0);ctx.lineTo(18,0);ctx.moveTo(0,-18);ctx.lineTo(0,18);ctx.stroke();ctx.restore();}
  // jetpack flames
@@ -268,6 +270,23 @@ function ldDrawButt(G){const B=G.butt;if(!B)return;const x=B.x,y=Math.max(LD_HUD
  const frame=B.drop?'crouch':(B.ph==='launch'?'jump':'somer_2');
  if(SHEETS.agent_coco)drawSprite('agent_coco',SHEETS.agent_coco.frames[frame]?frame:'jump',x,y,B.to&&B.to.x<x,1,.5);else{ctx.fillStyle='#2d3a8a';ctx.fillRect(x-8,y-26,16,24);}
  rrect(x-11,y-26,8,14,3,'#d83a3a','#000',1.5);}
+
+// Michael's Butt Bomb sheets: bb_a (launch crouch/flip/upside-down/fly-up 0-3, hover thumbs-up 4-7, perch landing 8-11, FX 12 starburst 13 shock ring 14 dust 15 pizza mushroom),
+// bb_b (perch idle/watch/ready/lift-off 0-3, hover + point down 4-7, knees-up drop 8-11, butt-slam sit 12, impact 13, dust 14, bounce up 15), bb_c (reticle 0-3, flattened goon 4-7)
+function ldDrawButtArt(G,B){if(!(IMG['ld/bb_a']&&IMG['ld/bb_a'].width&&IMG['ld/bb_b']&&IMG['ld/bb_b'].width))return false;
+ const x=B.x,y=Math.max(LD_HUD+46,B.y-B.z),fl=B.to?B.to.x<x:G.perch.x>W/2,S=.42,wk=Math.floor(G.t*10)%4;
+ if(B.z>2){ctx.fillStyle='rgba(0,0,0,.3)';ctx.beginPath();ctx.ellipse(B.x,B.y+2,14,5,0,0,7);ctx.fill();}
+ if(B.ph==='hop'&&B.to&&!B.to.dead&&!ldStripC('bb_c',Math.floor(G.t*8)%4,B.to.x,B.to.y-12,.3)){}
+ let st='bb_b',f=4+wk;const since=B.hitT!=null?G.t-B.hitT:9;
+ if(B.ph==='launch'){const t=B.t;if(t<.12){f=1;}else if(t<.3){f=2;}else if(t<.42){st='bb_a';f=0;}else if(t<.56){st='bb_a';f=1;}else if(t<.68){st='bb_a';f=2;}else{st='bb_a';f=3;}}
+ else if(since<.12)f=12;else if(since<.24)f=15;
+ else if(B.ph==='hop'){const dur=B.hits?.42:.6,k=Math.min(1,B.t/dur);if(k>.6)f=8+Math.min(3,Math.floor((k-.6)/.4*4));else if(!B.hits){st='bb_a';f=4+wk;}else f=4+wk%4;}
+ else if(B.ph==='home'){const k=Math.min(1,B.t/.8);if(k>.75){st='bb_a';f=8+Math.min(1,Math.floor((k-.75)/.25*2));}else{st='bb_a';f=4+wk;}}
+ const by=(st==='bb_a'&&(f===8||f===9))||(st==='bb_b'&&f<3)?y+8:y+4;
+ ldStrip(st,f,x,by,S,fl);return true;}
+// Coco waiting on his perch (watch check now and then, landing pose after a run)
+function ldDrawPerchCoco(G){if(!(IMG['ld/bb_b']&&IMG['ld/bb_b'].width))return false;const p=G.perch,fl=p.x>W/2,since=G.perchLand!=null?G.t-G.perchLand:9;
+ if(since<.5)return ldStrip('bb_a',since<.25?10:11,p.x,p.y+8,.36,fl);const c=G.t%6;return ldStrip('bb_b',c>4.6&&c<5.6?1:0,p.x,p.y+8,.36,fl);}
 
 // ---------- cursors and menus
 function ldCursorUpdate(G,p,dt){const C=G.cursor[p];if(MUI.mouseRecent()&&p===0&&MUI.mx>=0&&!C.menu){C.x=MUI.mx;C.y=MUI.my;}
