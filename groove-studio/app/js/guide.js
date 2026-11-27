@@ -2,7 +2,7 @@
 // It works out the tempo (from the beat it hears) and the key (from the notes it hears), all on this Mac, no internet needed.
 // Then it can match your song to that music, start your loop in time with it, light up keys that fit, and give tips.
 'use strict';
-const GUIDE={on:false,on2:false,o:[],ot:[],pF:0,pL:0,hop:512/48000,chroma:new Float32Array(12),frames:0,bpm:0,bpmConf:0,bpmHist:[],beatT:0,period:0,
+const GUIDE={lock:true,err:0,on:false,on2:false,o:[],ot:[],pF:0,pL:0,hop:512/48000,chroma:new Float32Array(12),frames:0,bpm:0,bpmConf:0,bpmHist:[],beatT:0,period:0,
  key:-1,minor:false,keyConf:0,heard:[],tip:'',lastTempo:0,lastKey:0,an:null,fbuf:null,pulse:0};
 const KK_MAJ=[6.35,2.23,3.48,2.33,4.38,4.09,2.52,5.19,2.39,3.66,2.29,2.88],KK_MIN=[6.33,2.68,3.52,5.38,2.60,3.53,2.54,4.75,3.98,2.69,3.34,3.17];
 async function guideOn(){try{await micOn();}catch(e){toast('Smart Guide needs the microphone. Allow it in System Settings > Privacy & Security > Microphone.',true);return;}
@@ -46,7 +46,7 @@ function guideKey(){if(GUIDE.frames<15)return;const C=GUIDE.chroma;const corr=(p
  let m=0,v=0;for(let i=0;i<12;i++)m+=C[i]/12;for(let i=0;i<12;i++)v+=(C[i]-m)*(C[i]-m)/12;const cv=Math.sqrt(v)/(m||1);GUIDE.cv=cv;
  GUIDE.key=all[0][1];GUIDE.minor=all[0][2];GUIDE.keyConf=Math.max(0,Math.min(1,(all[0][0]-.35)*1.6+(all[0][0]-all[1][0])*2))*Math.max(0,Math.min(1,(cv-.45)/.4));}
 const guideKeyName=()=>GUIDE.key<0?'…':NOTE_NAMES[GUIDE.key]+(GUIDE.minor?' minor':' major');
-function guideThink(){if(!GUIDE.on)return;guideTempo();guideKey();GUIDE.tip=guideTip();guideUpdateStrip();}
+function guideThink(){if(!GUIDE.on)return;guideTempo();guideKey();guideLock();GUIDE.tip=guideTip();guideUpdateStrip();}
 function guideTip(){const lvl=MIC?MIC.lvl:0,hasT=GUIDE.bpmConf>.35&&GUIDE.bpm>0,hasK=GUIDE.keyConf>.3&&GUIDE.key>=0;
  if(!GUIDE.o.length||GUIDE.o.length*GUIDE.hop<3&&!hasT)return 'Listening… give me about 5 seconds of music.';
  if(lvl<.004&&!hasT)return 'I can\'t hear much yet. Play music near your Mac or turn it up a little.';
@@ -81,7 +81,7 @@ function guideStrip(){const s=el('div','qguide');s.id='qguide';
  s.innerHTML=`<span class="gear">🎧</span><div class="gvu"><i id="gVu"></i></div><span class="gpulse" id="gPulse"></span>
  <div class="gval"><small>Tempo</small><b id="gBpm">…</b></div><div class="gval"><small>Key</small><b id="gKey">…</b></div>`;
  s.append(btn('Match',guideMatch,'Set your song to the tempo and key of the music (notes already in your song move to the new key)','gbtn'),
-  btn('Start in time',guideSync,'Starts your loop exactly on the next beat of the music','gbtn'),el('span','gtip',''));
+  btn('Start in time',guideSync,'Starts your loop exactly on the next beat of the music','gbtn'),btn(GUIDE.lock?'Stay locked: on':'Stay locked: off',()=>{GUIDE.lock=!GUIDE.lock;renderPanel();},'Keeps nudging your loop so it stays on the music\'s beat, even if the music drifts a little','gbtn'+(GUIDE.lock?' on':'')),el('span','gtip',''));
  setTimeout(guideUpdateStrip,0);return s;}
 function guideUpdateStrip(){const b=document.getElementById('gBpm');if(!b)return;const hasT=GUIDE.bpmConf>.25&&GUIDE.bpm>0,hasK=GUIDE.keyConf>.2&&GUIDE.key>=0;
  b.textContent=hasT?Math.round(GUIDE.bpm)+' BPM':'…';b.parentNode.classList.toggle('sure',GUIDE.bpmConf>.5);
@@ -92,3 +92,10 @@ function guideFrame(){const v=document.getElementById('gVu');if(v&&MIC)v.style.w
  if(GUIDE.period>0&&AC&&GUIDE.bpmConf>.25){const ph=((AC.currentTime-GUIDE.beatT)/GUIDE.period)%1;const p=document.getElementById('gPulse');if(p)p.style.opacity=ph<.15||ph>.97?1:.15;}
  const now=performance.now();if(now-GUIDE.pulse<150)return;GUIDE.pulse=now;
  document.querySelectorAll('.qpiano [data-pc]').forEach(k=>k.classList.toggle('heard',GUIDE.heard.includes(+k.dataset.pc)));}
+// Stay locked: every 0.4 s compare where our beat sounds with where the music's beat is, and nudge our clock part of the way.
+// Small steps (at most 20 ms) so you never hear a jump; it keeps a loop at 120 in step with music at 120.3.
+function guideLock(){if(!T.playing||T.rec||GUIDE.bpmConf<.35||!(GUIDE.period>0))return;const sp=spb(),unit=Math.min(sp,GUIDE.period);
+ const big=Math.max(sp,GUIDE.period)/unit;if(Math.abs(big-Math.round(big))>.04)return;   // the song and the music aren't the same tempo (or double/half)
+ const lat=(AC.outputLatency||0)+(AC.baseLatency||0),now=AC.currentTime,Lnow=(now-T.t0)/sp,tb=T.t0+Math.round(Lnow)*sp,aud=tb+lat;
+ const k=Math.round((aud-GUIDE.beatT)/unit),e=aud-(GUIDE.beatT+k*unit);GUIDE.err=e;
+ if(Math.abs(e)<.008||Math.abs(e)>unit*.35)return;if(GUIDE.lock)T.t0-=Math.max(-.02,Math.min(.02,e*.35));}

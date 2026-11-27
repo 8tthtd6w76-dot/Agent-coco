@@ -56,7 +56,7 @@ function qTap(q,m,vel=1){ensureAudio().then(()=>{
   const tr=qTrack(q,true);if(!tr)return;
   if(q.kind==='pad')livePad(tr,q.p,vel);else liveKeyDown(tr,m,.9*vel);
   if(!T.playing){qFreeTap(q,m,vel);return;}
-  QK.armed.add(q.n);
+  QK.armed.add(q.n);if(typeof buddyHearTap==='function')buddyHearTap(q,m,headNow(),vel);
   const late=((AC.outputLatency||0)+(AC.baseLatency||0))*P.bpm/60;let b=headNow()-late;
   if(loopOn()&&b<P.loop.a)b+=P.loop.b-P.loop.a;const g=QK.snap;b=Math.round(b*g)/g;if(loopOn()&&b>=P.loop.b)b=P.loop.a;
   let c=tr.clips.find(c=>b>=c.start&&b<c.start+c.len);
@@ -109,7 +109,8 @@ function qHelpBox(){const b=el('div','qhelp',`<button class="x" title="Close">�
  <li><b>Notes:</b> pick a sound, then play the mini keyboard with <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> <kbd>F</kbd>… (black keys <kbd>W</kbd> <kbd>E</kbd> <kbd>T</kbd> <kbd>Y</kbd> <kbd>U</kbd>). <kbd>Z</kbd>/<kbd>X</kbd> = octave down/up. Colored keys fit the song.</li>
  <li><b>Make a loop:</b> press <b>▶ Play</b> and play along. Everything snaps to the beat. Or play while stopped, then pause 2 seconds: Groove Studio finds your tempo and loops it.</li>
  <li><b>Layers:</b> every time around the loop is one layer. <b>Undo last layer</b> takes it out.</li>
- <li><b>🎧 Smart Guide:</b> play music near your Mac. It hears the tempo and key, can match your song to it, and lights up the keys to try.</li>
+ <li><b>🎧 Smart Guide:</b> play music near your Mac. It hears the tempo and key, can match your song to it, keep your loop locked to its beat, and lights up the keys to try.</li>
+ <li><b>🤖 Jam Buddy:</b> pick a mode and press Start. It adds its own parts a little at a time. Play a riff, leave a gap, and it answers with a cover of it.</li>
  <li><b>🎹 MIDI:</b> plug in a MIDI keyboard (like an M-VAVE). Its keys play the picked sound, its pads play drums, its knobs turn the FM-1 knobs.</li></ol>
  <div class="hint">Press <kbd>?</kbd> any time to show or hide this.</div>`);b.querySelector('.x').onclick=()=>{QK.help=false;renderPanel();};return b;}
 function quickPanel(Pn){const q=qInst(),col=qColor(q);
@@ -118,9 +119,11 @@ function quickPanel(Pn){const q=qInst(),col=qColor(q);
  const hr=el('div','qhead');
  const gb=btn(GUIDE.on?'🎧 Smart Guide: on':'🎧 Smart Guide',()=>GUIDE.on?guideOff():guideOn(),'Listens to music in the room through your mic and helps you play along','qguideb'+(GUIDE.on?' on':''));
  const mb=btn(MIDI.names.length?'🎹 '+MIDI.names[0]:'🎹 MIDI',()=>midiMenu(mb),MIDI.names.length?'MIDI keyboard connected':'Connect a MIDI keyboard','qmidib'+(MIDI.names.length?' on':''));
- hr.append(gb,mb,btn('💾 Save & share ▾',e=>{const r=e.currentTarget.getBoundingClientRect();qShareMenu(r.left,r.bottom+4);},'Save your jam, take it to Agent Coco or your phone, or add a sound file'),btn('?',()=>{QK.help=!QK.help;renderPanel();},'How to jam (?)','qhelpb'+(QK.help?' on':'')));
+ const bb=btn(BUDDY.on?'🤖 Buddy: on':'🤖 Jam Buddy',()=>{BUDDY.show=!BUDDY.show||BUDDY.on;renderPanel();},'A band mate that listens to you and plays along','qbuddyb'+(BUDDY.on||BUDDY.show?' on':''));
+ hr.append(bb,gb,mb,btn('💾 Save & share ▾',e=>{const r=e.currentTarget.getBoundingClientRect();qShareMenu(r.left,r.bottom+4);},'Save your jam, take it to Agent Coco or your phone, or add a sound file'),btn('?',()=>{QK.help=!QK.help;renderPanel();},'How to jam (?)','qhelpb'+(QK.help?' on':'')));
  h.appendChild(hr);Pn.appendChild(h);
  const outer=el('div','pb quick');Pn.appendChild(outer);
+ if(BUDDY.show||BUDDY.on)outer.appendChild(buddyStrip());
  if(GUIDE.on)outer.appendChild(guideStrip());
  const body=el('div','qbody');outer.appendChild(body);
  // drums
@@ -175,6 +178,7 @@ addEventListener('blur',()=>{for(const c in QK.keyDown){const H=QK.keyDown[c];qR
 function quickTick(){
  if(T.playing&&loopOn()){const h=headNow();if(QK.lastH!=null&&h<QK.lastH-.5&&QK.armedSnap&&!Object.keys(QK.held).length)qFinishLayer();QK.lastH=h;}else{QK.lastH=null;if(!T.playing&&QK.armedSnap)qFinishLayer();}
  if(GUIDE.on)guideFrame();
+ buddyTick();
  if(!QK.dirtyDraw&&!QK.needPanel)return;const now=performance.now();if(now-(QK.lastDraw||0)<150)return;QK.lastDraw=now;
  if(QK.dirtyDraw){QK.dirtyDraw=false;renderTimeline();}if(QK.needPanel&&PANEL.tab==='quick'&&!document.querySelector('.qpanel-busy')){QK.needPanel=false;renderPanel();}else QK.needPanel=false;}
 function qRepeatAll(){qFinishLayer();const end=Math.max(songEnd(),P.loop.b);let n=0;commit();
